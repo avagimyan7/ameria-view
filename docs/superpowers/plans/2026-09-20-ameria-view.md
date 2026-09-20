@@ -3581,8 +3581,15 @@ export function TransactionsScreen({ transactions, categories, onAssign, onCreat
     setFilters((current) => ({ ...current, [field]: event.target.value || undefined }))
 
   const assign = (tx, categoryId) => {
-    if (!categoryId) return
+    // Пустое значение — это осознанное «снять категорию», а не отсутствие выбора.
+    // Оно тоже уходит в пометки: иначе снять однажды поставленную категорию было бы нельзя,
+    // а categorize() отличает «пометки нет» от «человек явно выбрал без категории»
+    // по наличию ключа, а не по истинности значения.
     onAssign(tx.key, categoryId)
+    if (!categoryId) {
+      setPendingRule(null)
+      return
+    }
     const match = suggestRuleText(tx)
     if (match) setPendingRule({ match, category: categoryId })
   }
