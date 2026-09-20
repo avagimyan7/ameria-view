@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate'
 import { buildWorkbook } from '../../test/fixtures/buildWorkbook.js'
 import { readSheetRows } from './xlsx.js'
 
@@ -26,7 +27,21 @@ describe('readSheetRows', () => {
     expect(rows.map((r) => r.row)).toEqual([1, 2])
   })
 
-  it('внятно ругается, если листа нет', () => {
+  it('ругается с понятной ошибкой, если листа нет в валидном зипе', () => {
+    const validZip = unzipSync(buildWorkbook([['x']]))
+    delete validZip['xl/worksheets/sheet1.xml']
+    const noSheetZip = zipSync(validZip)
+    expect(() => readSheetRows(noSheetZip)).toThrow(/лист Excel/)
+  })
+
+  it('ругается с понятной ошибкой, если XML листа испорчен', () => {
+    const validZip = unzipSync(buildWorkbook([['x']]))
+    validZip['xl/worksheets/sheet1.xml'] = strToU8('<worksheet><sheetData>')
+    const brokenXmlZip = zipSync(validZip)
+    expect(() => readSheetRows(brokenXmlZip)).toThrow(/разобрать XML/)
+  })
+
+  it('падает на испорченном архиве', () => {
     const notAWorkbook = buildWorkbook([['x']])
     const broken = notAWorkbook.slice(0, 40)
     expect(() => readSheetRows(broken)).toThrow()
