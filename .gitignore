@@ -1,0 +1,10 @@
+# Выгрузки банка — никогда не коммитим
+*.xls
+*.xlsx
+*.csv
+/data/
+/statements/
+
+node_modules/
+dist/
+.DS_Store
