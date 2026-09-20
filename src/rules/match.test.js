@@ -39,6 +39,11 @@ describe('categorize', () => {
     expect(categorize(tx(), withOverride)).toBe('cafe')
   })
 
+  it('ручная пометка пустой строкой переопределяет правило', () => {
+    const withClearedOverride = { ...settings, overrides: { k1: '' } }
+    expect(categorize(tx(), withClearedOverride)).toBeNull()
+  })
+
   it('срабатывает первое подходящее правило по порядку', () => {
     const ordered = {
       ...settings,

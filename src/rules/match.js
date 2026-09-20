@@ -11,8 +11,9 @@ export function ruleMatches(tx, rule) {
 // Приоритет: ручная пометка → текстовое правило → тип операции → без категории.
 // Ручная пометка всегда сильнее правила, иначе правило молча перетрёт решение человека.
 export function categorize(tx, { rules = [], overrides = {}, opTypeCategories = {} } = {}) {
-  const manual = overrides[tx.key]
-  if (manual) return manual
+  if (Object.prototype.hasOwnProperty.call(overrides, tx.key)) {
+    return overrides[tx.key] || null
+  }
 
   for (const rule of rules) {
     if (ruleMatches(tx, rule)) return rule.category
