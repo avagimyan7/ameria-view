@@ -111,8 +111,19 @@ describe('инвариант сходимости', () => {
     expect(months.reduce((acc, m) => acc + m.income, 0)).toBe(totals(list).income)
   })
 
-  it('пришло минус ушло равно чистому результату', () => {
-    const { income, expense, net } = totals(list)
-    expect(net).toBe(income - expense)
+  it('сумма месячных нетто равна общему нетто', () => {
+    const monthlyNetSum = byMonth(list).reduce((acc, m) => acc + m.net, 0)
+    expect(monthlyNetSum).toBe(totals(list).net)
+  })
+
+  it('общее нетто совпадает с ручными расчётами из фиксчера', () => {
+    // Countable: groceries 123456 + transport 789 + null 42 + cafe 31337 = 155624 expense
+    //           salary 555555 = income
+    // Excluded: internal 777777, rejected 888888
+    expect(totals(list)).toEqual({
+      income: 555555,
+      expense: 155624,
+      net: 399931,
+    })
   })
 })
