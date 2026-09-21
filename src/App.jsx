@@ -4,10 +4,13 @@ import { Layout } from './ui/Layout.jsx'
 import { ImportScreen } from './ui/ImportScreen.jsx'
 import { OverviewScreen } from './ui/OverviewScreen.jsx'
 import { TransactionsScreen } from './ui/TransactionsScreen.jsx'
+import { CategoriesScreen } from './ui/CategoriesScreen.jsx'
 import { importWorkbook } from './import/pipeline.js'
 import { applyCategories } from './rules/match.js'
 import { loadSettings, saveSettings } from './store/settings.js'
 import { loadTransactions, saveTransactions } from './store/db.js'
+import { byMonth } from './stats/aggregate.js'
+import { NO_CATEGORY } from './stats/filter.js'
 
 export default function App() {
   const [screen, setScreen] = useState('import')
@@ -16,6 +19,7 @@ export default function App() {
   const [report, setReport] = useState(null)
   const [detectedAccounts, setDetectedAccounts] = useState([])
   const [error, setError] = useState(null)
+  const [transactionsPreset, setTransactionsPreset] = useState({ filters: {}, sort: 'date' })
 
   useEffect(() => {
     loadTransactions().then((stored) => {
@@ -79,13 +83,31 @@ export default function App() {
       )}
       {screen === 'transactions' && (
         <TransactionsScreen
+          key={`${transactionsPreset.sort}-${transactionsPreset.filters.categoryId ?? ''}`}
           transactions={transactions}
           categories={settings.categories}
           onAssign={handleAssign}
           onCreateRule={handleCreateRule}
+          initialFilters={transactionsPreset.filters}
+          initialSort={transactionsPreset.sort}
         />
       )}
-      {['categories', 'settings'].includes(screen) && (
+      {screen === 'categories' && (
+        <CategoriesScreen
+          transactions={transactions}
+          categories={settings.categories}
+          budgets={settings.budgets}
+          month={byMonth(transactions).slice(-1)[0]?.month ?? new Date().toISOString().slice(0, 7)}
+          today={new Date().toISOString().slice(0, 10)}
+          onChangeBudget={(categoryId, limit) =>
+            updateSettings({ ...settings, budgets: { ...settings.budgets, [categoryId]: limit } })}
+          onShowUncategorized={() => {
+            setTransactionsPreset({ filters: { categoryId: NO_CATEGORY }, sort: 'amount' })
+            setScreen('transactions')
+          }}
+        />
+      )}
+      {screen === 'settings' && (
         <p className="muted">Экран в разработке</p>
       )}
     </Layout>
