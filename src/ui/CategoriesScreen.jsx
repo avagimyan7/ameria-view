@@ -3,7 +3,7 @@ import { byCategory, uncategorized } from '../stats/aggregate.js'
 import { budgetProgress } from '../stats/budget.js'
 import { monthOf } from '../import/date.js'
 import { CategoryBars } from './charts/CategoryBars.jsx'
-import { formatMoney } from './format.js'
+import { formatMoney, formatMonth } from './format.js'
 
 export function CategoriesScreen({
   transactions, categories, budgets, month, today, onChangeBudget, onShowUncategorized, currency = null,
@@ -30,15 +30,19 @@ export function CategoriesScreen({
   return (
     <div>
       <div className="panel">
-        <h3>Расходы по категориям</h3>
+        <h3 data-testid="categories-heading">Расходы по категориям за {formatMonth(month)}</h3>
         <CategoryBars rows={rows} categories={categories} currency={currency} />
       </div>
 
       {pending.length > 0 && (
         <div className="panel" style={{ marginTop: 12 }}>
+          {/* Полосы выше — за один месяц, а очередь — за всё время и вместе с доходами:
+              её задача разобрать весь накопившийся хвост. Масштаб назван явно, чтобы
+              два числа на одном экране не выглядели противоречием. */}
           <h3>Без категории</h3>
           <p data-testid="uncategorized-summary">
-            {pending.length} операций на {formatMoney(pendingAmount, currency)}. Начни с самых крупных —
+            За весь период, доходы и расходы вместе: {pending.length} операций
+            на {formatMoney(pendingAmount, currency)}. Начни с самых крупных —
             в них лежит почти весь неопознанный оборот.
           </p>
           <button type="button" onClick={onShowUncategorized}>Разобрать</button>
