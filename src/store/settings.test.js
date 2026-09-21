@@ -3,6 +3,7 @@ import {
   SETTINGS_VERSION, defaultSettings, loadSettings, saveSettings,
   serializeSettings, parseSettings,
 } from './settings.js'
+import { SEED_OPTYPE_CATEGORIES, SEED_RULES } from '../rules/seed.js'
 
 describe('настройки', () => {
   beforeEach(() => {
@@ -17,6 +18,13 @@ describe('настройки', () => {
     expect(settings.ownAccounts).toEqual([])
     expect(settings.overrides).toEqual({})
     expect(settings.budgets).toEqual({})
+  })
+
+  it('содержит opTypeCategories от seed, rules от seed, и пустые overrides', () => {
+    const settings = defaultSettings()
+    expect(settings.opTypeCategories).toEqual(SEED_OPTYPE_CATEGORIES)
+    expect(settings.rules).toEqual(SEED_RULES)
+    expect(settings.overrides).toEqual({})
   })
 
   it('сохраняет и читает рабочую копию', () => {
