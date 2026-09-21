@@ -25,12 +25,11 @@ describe('CategoriesScreen', () => {
 
   it('показывает траты по категориям', () => {
     render(<CategoriesScreen {...props} transactions={[tx()]} />)
-    // Имя категории и сумма встречаются и в полосах, и в таблице бюджетов,
+    // Имя категории и сумма встречаются и в полосах, и в карточках бюджетов,
     // поэтому проверяем наличие, а не единственность.
     expect(screen.getAllByText('Продукты').length).toBeGreaterThan(0)
-    // Check for exactly "1 000 ֏" in the bars (100000 luma)
-    const expected = formatAmd(100000)
-    expect(screen.getByRole('table').textContent).toContain(expected)
+    // Ровно «1 000 ֏» (100000 лум) — в полосах категорий.
+    expect(screen.getByTestId('category-bars').textContent).toContain(formatAmd(100000))
   })
 
   it('показывает бюджет, факт и прогноз', () => {
@@ -52,8 +51,9 @@ describe('CategoriesScreen', () => {
       <CategoriesScreen {...props} budgets={{}}
         transactions={[tx({ categoryId: 'transport', amount: 145770 })]} />,
     )
-    // Transport category has no limit set, but should still show spending
-    expect(screen.getByTestId('budget-transport-spent').textContent).toBe(formatAmd(145770))
+    // У транспорта нет лимита, а траты всё равно видны. В бюджетах суммы
+    // округлены до целых драмов: 1 457,70 ֏ → 1 458 ֏.
+    expect(screen.getByTestId('budget-transport-spent').textContent).toBe(formatAmd(145800))
   })
 
   it('запрещает отрицательные лимиты', () => {
@@ -75,13 +75,13 @@ describe('CategoriesScreen', () => {
     expect(screen.getByTestId('budget-groceries-overrun').textContent).toMatch(/20/)
   })
 
-  it('показывает превышен когда лимит уже нарушен', () => {
+  it('называет размер перерасхода, когда лимит уже нарушен', () => {
     render(
       <CategoriesScreen {...props} budgets={{ groceries: 100000 }}
         transactions={[tx({ amount: 150000, date: '2026-09-01' })]} />,
     )
-    // Spending exceeds limit, should show "превышен"
-    expect(screen.getByTestId('budget-groceries-overrun').textContent).toBe('превышен')
+    // Потрачено 1 500 ֏ при лимите 1 000 ֏ — перерасход ровно 500 ֏.
+    expect(screen.getByTestId('budget-groceries-overrun').textContent).toBe(`перерасход ${formatAmd(50000)}`)
   })
 
   it('сообщает, сколько денег осталось без категории, и ведёт разбирать', () => {
