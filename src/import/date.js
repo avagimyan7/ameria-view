@@ -13,3 +13,11 @@ export function parseDate(raw) {
 export function monthOf(iso) {
   return String(iso).slice(0, 7)
 }
+
+// Сегодняшняя дата в ISO по местному времени. toISOString() даёт дату в UTC:
+// в Ереване (UTC+4) до 04:00 это ещё вчера, и прогноз бюджета в первый день
+// месяца считал бы, что месяц не начался.
+export function localIsoDate(date = new Date()) {
+  const pad = (value) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}

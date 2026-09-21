@@ -9,6 +9,7 @@ import { SettingsScreen } from './ui/SettingsScreen.jsx'
 import { importWorkbook } from './import/pipeline.js'
 import { effectiveOwnAccounts } from './import/accounts.js'
 import { deriveDirections } from './import/transactions.js'
+import { localIsoDate, monthOf } from './import/date.js'
 import { applyCategories } from './rules/match.js'
 import { loadSettings, saveSettings } from './store/settings.js'
 import { loadTransactions, saveTransactions } from './store/db.js'
@@ -188,8 +189,8 @@ export default function App() {
           transactions={transactions}
           categories={settings.categories}
           budgets={settings.budgets}
-          month={byMonth(transactions, activeCurrency).slice(-1)[0]?.month ?? new Date().toISOString().slice(0, 7)}
-          today={new Date().toISOString().slice(0, 10)}
+          month={byMonth(transactions, activeCurrency).slice(-1)[0]?.month ?? monthOf(localIsoDate())}
+          today={localIsoDate()}
           currency={activeCurrency}
           onChangeBudget={(categoryId, limit) =>
             updateSettings({ ...settings, budgets: { ...settings.budgets, [categoryId]: limit } })}
