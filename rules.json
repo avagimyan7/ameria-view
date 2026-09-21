@@ -1,6 +1,292 @@
 {
   "version": 1,
-  "categories": [],
-  "rules": [],
+  "categories": [
+    {
+      "id": "groceries",
+      "name": "Продукты",
+      "color": "#2f9e44"
+    },
+    {
+      "id": "cafe",
+      "name": "Кафе и рестораны",
+      "color": "#e8590c"
+    },
+    {
+      "id": "pharmacy",
+      "name": "Аптека",
+      "color": "#0ca678"
+    },
+    {
+      "id": "transport",
+      "name": "Транспорт",
+      "color": "#1971c2"
+    },
+    {
+      "id": "subscriptions",
+      "name": "Подписки",
+      "color": "#7048e8"
+    },
+    {
+      "id": "utilities",
+      "name": "Коммуналка",
+      "color": "#495057"
+    },
+    {
+      "id": "telecom",
+      "name": "Связь",
+      "color": "#1098ad"
+    },
+    {
+      "id": "shopping",
+      "name": "Покупки",
+      "color": "#c2255c"
+    },
+    {
+      "id": "fees",
+      "name": "Комиссии банка",
+      "color": "#f08c00"
+    },
+    {
+      "id": "loan_principal",
+      "name": "Кредит: тело",
+      "color": "#a61e4d"
+    },
+    {
+      "id": "loan_interest",
+      "name": "Кредит: проценты",
+      "color": "#d6336c"
+    },
+    {
+      "id": "deposit",
+      "name": "Депозит",
+      "color": "#087f5b"
+    },
+    {
+      "id": "loan_in",
+      "name": "Кредит получен",
+      "color": "#5f3dc4"
+    },
+    {
+      "id": "salary",
+      "name": "Зарплата",
+      "color": "#2b8a3e"
+    },
+    {
+      "id": "cash",
+      "name": "Наличные",
+      "color": "#5c940d"
+    },
+    {
+      "id": "transfers",
+      "name": "Переводы людям",
+      "color": "#ae3ec9"
+    },
+    {
+      "id": "debts",
+      "name": "Долги",
+      "color": "#5c7cfa"
+    },
+    {
+      "id": "services",
+      "name": "Услуги",
+      "color": "#fab005"
+    },
+    {
+      "id": "wallets",
+      "name": "Пополнение кошельков",
+      "color": "#ff8787"
+    },
+    {
+      "id": "other",
+      "name": "Прочее",
+      "color": "#868e96"
+    }
+  ],
+  "rules": [
+    {
+      "match": "ASK 23",
+      "category": "groceries"
+    },
+    {
+      "match": "ԱՍԿ 23",
+      "category": "groceries"
+    },
+    {
+      "match": "OPTIM MARKET",
+      "category": "groceries"
+    },
+    {
+      "match": "YEREVAN CITY",
+      "category": "groceries"
+    },
+    {
+      "match": "EREBUNU SHUKA",
+      "category": "groceries"
+    },
+    {
+      "match": "AKG",
+      "category": "pharmacy"
+    },
+    {
+      "match": "ROSTOFARM",
+      "category": "pharmacy"
+    },
+    {
+      "match": "ԴԵՂԱՏ",
+      "category": "pharmacy"
+    },
+    {
+      "match": "YANDEX.PLUS",
+      "category": "subscriptions"
+    },
+    {
+      "match": "APPLE.COM",
+      "category": "subscriptions"
+    },
+    {
+      "match": "FIGMA",
+      "category": "subscriptions"
+    },
+    {
+      "match": "GOOGLE ONE",
+      "category": "subscriptions"
+    },
+    {
+      "match": "CLOUDFLARE",
+      "category": "subscriptions"
+    },
+    {
+      "match": "PROFIT SOFT",
+      "category": "subscriptions"
+    },
+    {
+      "match": "TELCELL",
+      "category": "transport"
+    },
+    {
+      "match": "YANDEX. GO",
+      "category": "transport"
+    },
+    {
+      "match": "YANDEX.GO",
+      "category": "transport"
+    },
+    {
+      "match": "PARKING",
+      "category": "transport"
+    },
+    {
+      "match": "UCOM",
+      "category": "telecom"
+    },
+    {
+      "match": "TEAM TELECOM",
+      "category": "telecom"
+    },
+    {
+      "match": "IDRAM UTILITY",
+      "category": "utilities"
+    },
+    {
+      "match": "CORN DOG",
+      "category": "cafe"
+    },
+    {
+      "match": "SORISO",
+      "category": "cafe"
+    },
+    {
+      "match": "WILDBERRIES",
+      "category": "shopping"
+    },
+    {
+      "match": "UNO SHOES",
+      "category": "shopping"
+    },
+    {
+      "match": "ԱՇԽԱՏԱՎԱՐՁ",
+      "category": "salary",
+      "direction": "income"
+    },
+    {
+      "match": "COMMISSION",
+      "category": "fees"
+    },
+    {
+      "match": "ԳԱՆՁՈՒՄ",
+      "category": "fees"
+    },
+    {
+      "match": "ՄԻՋՆ.",
+      "category": "fees"
+    },
+    {
+      "match": "ATM ",
+      "category": "cash",
+      "direction": "expense",
+      "opType": "Քարտային գործարք"
+    },
+    {
+      "match": "CARREFOUR",
+      "category": "groceries"
+    },
+    {
+      "match": "MG ARTSAKH",
+      "category": "groceries"
+    },
+    {
+      "match": "AT TORG",
+      "category": "groceries"
+    },
+    {
+      "match": "GOFIT",
+      "category": "groceries"
+    },
+    {
+      "match": "PHARMACAPS",
+      "category": "pharmacy"
+    },
+    {
+      "match": "OPENAI",
+      "category": "subscriptions"
+    },
+    {
+      "match": "KAMOIL",
+      "category": "transport"
+    },
+    {
+      "match": "ROYAL OIL",
+      "category": "transport"
+    },
+    {
+      "match": "TEMU.COM",
+      "category": "shopping"
+    },
+    {
+      "match": "CERRUTI",
+      "category": "shopping"
+    },
+    {
+      "match": "CASTERO",
+      "category": "shopping"
+    },
+    {
+      "match": "IDRAM LLC",
+      "category": "wallets",
+      "opType": "Քարտային գործարք"
+    },
+    {
+      "match": "Անձնական փոխանցում",
+      "category": "transfers",
+      "direction": "expense",
+      "opType": "Փոխանցում քարտին"
+    },
+    {
+      "match": "Հաշվի համալրում",
+      "category": "transfers",
+      "direction": "expense",
+      "opType": "Հաշվին փոխանցում"
+    }
+  ],
   "budgets": {}
 }
