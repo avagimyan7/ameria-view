@@ -4,102 +4,102 @@
     {
       "id": "groceries",
       "name": "Продукты",
-      "color": "#2f9e44"
+      "color": "#22A33A"
     },
     {
       "id": "cafe",
       "name": "Кафе и рестораны",
-      "color": "#e8590c"
+      "color": "#E8A13A"
     },
     {
       "id": "pharmacy",
       "name": "Аптека",
-      "color": "#0ca678"
+      "color": "#10B981"
     },
     {
       "id": "transport",
       "name": "Транспорт",
-      "color": "#1971c2"
+      "color": "#2196F3"
     },
     {
       "id": "subscriptions",
       "name": "Подписки",
-      "color": "#7048e8"
+      "color": "#6C4BF0"
     },
     {
       "id": "utilities",
       "name": "Коммуналка",
-      "color": "#495057"
+      "color": "#8A8F98"
     },
     {
       "id": "telecom",
       "name": "Связь",
-      "color": "#1098ad"
+      "color": "#06B6D4"
     },
     {
       "id": "shopping",
       "name": "Покупки",
-      "color": "#c2255c"
+      "color": "#D81B60"
     },
     {
       "id": "fees",
       "name": "Комиссии банка",
-      "color": "#f08c00"
+      "color": "#FF9800"
     },
     {
       "id": "loan_principal",
       "name": "Кредит: тело",
-      "color": "#a61e4d"
+      "color": "#C9184A"
     },
     {
       "id": "loan_interest",
       "name": "Кредит: проценты",
-      "color": "#d6336c"
+      "color": "#E11D62"
     },
     {
       "id": "deposit",
       "name": "Депозит",
-      "color": "#087f5b"
+      "color": "#14B8A6"
     },
     {
       "id": "loan_in",
       "name": "Кредит получен",
-      "color": "#5f3dc4"
+      "color": "#8B5CF6"
     },
     {
       "id": "salary",
       "name": "Зарплата",
-      "color": "#2b8a3e"
+      "color": "#34D399"
     },
     {
       "id": "cash",
       "name": "Наличные",
-      "color": "#5c940d"
+      "color": "#6D9B1E"
     },
     {
       "id": "transfers",
       "name": "Переводы людям",
-      "color": "#ae3ec9"
+      "color": "#B84DD1"
     },
     {
       "id": "debts",
       "name": "Долги",
-      "color": "#5c7cfa"
+      "color": "#5C7CFA"
     },
     {
       "id": "services",
       "name": "Услуги",
-      "color": "#fab005"
+      "color": "#F5A623"
     },
     {
       "id": "wallets",
       "name": "Пополнение кошельков",
-      "color": "#ff8787"
+      "color": "#FF8A80"
     },
     {
       "id": "other",
       "name": "Прочее",
-      "color": "#868e96"
+      "color": "#868E96"
     }
   ],
   "rules": [

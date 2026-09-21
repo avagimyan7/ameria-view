@@ -1,21 +1,21 @@
 import { OP } from '../domain/constants.js'
 
 export const SEED_CATEGORIES = [
-  { id: 'groceries', name: 'Продукты', color: '#2f9e44' },
-  { id: 'cafe', name: 'Кафе и рестораны', color: '#e8590c' },
-  { id: 'pharmacy', name: 'Аптека', color: '#0ca678' },
-  { id: 'transport', name: 'Транспорт', color: '#1971c2' },
-  { id: 'subscriptions', name: 'Подписки', color: '#7048e8' },
-  { id: 'utilities', name: 'Коммуналка', color: '#495057' },
-  { id: 'telecom', name: 'Связь', color: '#1098ad' },
-  { id: 'shopping', name: 'Покупки', color: '#c2255c' },
-  { id: 'fees', name: 'Комиссии банка', color: '#f08c00' },
-  { id: 'loan_principal', name: 'Кредит: тело', color: '#a61e4d' },
-  { id: 'loan_interest', name: 'Кредит: проценты', color: '#d6336c' },
-  { id: 'deposit', name: 'Депозит', color: '#087f5b' },
-  { id: 'loan_in', name: 'Кредит получен', color: '#5f3dc4' },
-  { id: 'salary', name: 'Зарплата', color: '#2b8a3e' },
-  { id: 'other', name: 'Прочее', color: '#868e96' },
+  { id: 'groceries', name: 'Продукты', color: '#22A33A' },
+  { id: 'cafe', name: 'Кафе и рестораны', color: '#E8A13A' },
+  { id: 'pharmacy', name: 'Аптека', color: '#10B981' },
+  { id: 'transport', name: 'Транспорт', color: '#2196F3' },
+  { id: 'subscriptions', name: 'Подписки', color: '#6C4BF0' },
+  { id: 'utilities', name: 'Коммуналка', color: '#8A8F98' },
+  { id: 'telecom', name: 'Связь', color: '#06B6D4' },
+  { id: 'shopping', name: 'Покупки', color: '#D81B60' },
+  { id: 'fees', name: 'Комиссии банка', color: '#FF9800' },
+  { id: 'loan_principal', name: 'Кредит: тело', color: '#C9184A' },
+  { id: 'loan_interest', name: 'Кредит: проценты', color: '#E11D62' },
+  { id: 'deposit', name: 'Депозит', color: '#14B8A6' },
+  { id: 'loan_in', name: 'Кредит получен', color: '#8B5CF6' },
+  { id: 'salary', name: 'Зарплата', color: '#34D399' },
+  { id: 'other', name: 'Прочее', color: '#868E96' },
 ]
 
 // Порядок важен: срабатывает первое подходящее правило.
