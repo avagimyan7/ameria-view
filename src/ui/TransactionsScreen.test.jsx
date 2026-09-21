@@ -65,6 +65,38 @@ describe('TransactionsScreen', () => {
     expect(screen.queryByText(/затронет/i)).toBe(null)
   })
 
+  it('внутренний перевод не окрашивается как расход', () => {
+    cleanup()
+    render(
+      <TransactionsScreen
+        transactions={[
+          tx({ direction: 'expense' }),
+          tx({ key: 'k2', direction: 'internal' }),
+          tx({ key: 'k3', direction: 'unresolved' }),
+        ]}
+        categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={noop} />,
+    )
+    // Get the table rows (skip header)
+    const rows = screen.getAllByRole('row')
+    expect(rows.length).toBeGreaterThanOrEqual(4) // header + 3 data rows
+
+    // Find amount cells and check their classes
+    const amountCells = Array.from(document.querySelectorAll('td.num'))
+    expect(amountCells.length).toBeGreaterThanOrEqual(3)
+
+    // First row (expense) should have 'expense' class
+    expect(amountCells[0].className).toContain('expense')
+    expect(amountCells[0].className).not.toContain('muted')
+
+    // Second row (internal) should NOT have 'expense' class, should be 'muted'
+    expect(amountCells[1].className).not.toContain('expense')
+    expect(amountCells[1].className).toContain('muted')
+
+    // Third row (unresolved) should NOT have 'expense' class, should be 'muted'
+    expect(amountCells[2].className).not.toContain('expense')
+    expect(amountCells[2].className).toContain('muted')
+  })
+
   it('предлагает создать правило и показывает, скольких операций оно коснётся', () => {
     cleanup()
     const onCreateRule = vi.fn()

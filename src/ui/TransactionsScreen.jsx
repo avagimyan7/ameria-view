@@ -93,7 +93,7 @@ export function TransactionsScreen({ transactions, categories, onAssign, onCreat
                     ))}
                   </select>
                 </td>
-                <td className={`num ${tx.direction === 'income' ? 'income' : 'expense'}`}>
+                <td className={`num ${tx.direction === 'income' ? 'income' : tx.direction === 'expense' ? 'expense' : 'muted'}`}>
                   {formatAmd(tx.amount)}
                 </td>
               </tr>
