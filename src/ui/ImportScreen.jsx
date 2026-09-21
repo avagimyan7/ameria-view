@@ -8,6 +8,10 @@ export function ImportScreen({ onImport, onConfirmAccounts, report, detectedAcco
     if (!file) return
     const reader = new FileReader()
     reader.onload = () => onImport(new Uint8Array(reader.result))
+    reader.onerror = () => {
+      const error = new Error('Не удалось прочитать файл')
+      onImport(error)
+    }
     reader.readAsArrayBuffer(file)
   }
 
@@ -51,10 +55,12 @@ export function ImportScreen({ onImport, onConfirmAccounts, report, detectedAcco
           <p>Строк в файле: {report.rows}</p>
           <p>Добавлено: {report.added}</p>
           <p>Дублей: {report.duplicates}</p>
-          {report.unresolved > 0 && (
+          {report.unresolved > 0 ? (
             <p className="expense">
               Требуют внимания: {report.unresolved} — ни один счёт операции не опознан как твой
             </p>
+          ) : (
+            <p>Требуют внимания: 0</p>
           )}
         </div>
       )}
