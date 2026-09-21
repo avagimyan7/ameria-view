@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { filterTransactions } from './filter.js'
+import { filterTransactions, NO_CATEGORY } from './filter.js'
+import { uncategorized } from './aggregate.js'
 
 const tx = (over) => ({
   key: Math.random().toString(36), date: '2026-09-10', opType: 'Քարտային գործարք',
@@ -53,5 +54,29 @@ describe('filterTransactions', () => {
       tx({ status: 'Պենդինգ' }), // Not approved - NOT counted
     ]
     expect(filterTransactions(list, { countableOnly: true })).toHaveLength(2)
+  })
+
+  it('очередь разбора (uncategorized) и фильтр «Разобрать» (categoryId + countableOnly) описывают одно и то же множество', () => {
+    const list = [
+      // Без категории и учитываемые — должны попасть в обе очереди.
+      tx({ direction: 'expense', categoryId: null }),
+      tx({ direction: 'income', categoryId: null }),
+      // Разобранные — не должны попасть ни туда, ни туда.
+      tx({ direction: 'expense', categoryId: 'groceries' }),
+      tx({ direction: 'income', categoryId: 'salary' }),
+      // Внутренний перевод без категории — не учитывается, несмотря на отсутствие категории.
+      tx({ direction: 'internal', categoryId: null }),
+      // Операция «требует внимания» без категории — тоже не учитывается.
+      tx({ direction: 'unresolved', categoryId: null }),
+      // Неподтверждённая операция без категории — тоже не учитывается.
+      tx({ direction: 'expense', categoryId: null, status: 'Պենդինգ' }),
+    ]
+
+    const queue = uncategorized(list)
+    const preset = filterTransactions(list, { categoryId: NO_CATEGORY, countableOnly: true })
+
+    expect(queue).toHaveLength(2)
+    expect(preset).toHaveLength(2)
+    expect(preset.length).toBe(queue.length)
   })
 })
