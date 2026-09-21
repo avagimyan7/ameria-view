@@ -13,7 +13,8 @@ import { localIsoDate, monthOf } from './import/date.js'
 import { applyCategories } from './rules/match.js'
 import { loadSettings, saveSettings } from './store/settings.js'
 import { loadTransactions, saveTransactions } from './store/db.js'
-import { byMonth, currenciesOf } from './stats/aggregate.js'
+import { loadImports, recordImport } from './store/imports.js'
+import { byMonth, currenciesOf, isCountable } from './stats/aggregate.js'
 import { NO_CATEGORY } from './stats/filter.js'
 
 // Направление и категория — производные от настроек, а не данные операции.
@@ -44,6 +45,7 @@ export default function App() {
   const [loaded, setLoaded] = useState(false)
   const [loadError, setLoadError] = useState(null)
   const [report, setReport] = useState(null)
+  const [imports, setImports] = useState(() => loadImports())
   const [detectedAccounts, setDetectedAccounts] = useState([])
   const [error, setError] = useState(null)
   const [transactionsPreset, setTransactionsPreset] = useState({ filters: {}, sort: 'date' })
@@ -94,7 +96,7 @@ export default function App() {
   const handleCreateRule = (rule) =>
     updateSettings({ ...settings, rules: [rule, ...settings.rules] })
 
-  const handleImport = async (bytesOrError) => {
+  const handleImport = async (bytesOrError, file = {}) => {
     try {
       setError(null)
       setReport(null)
@@ -113,7 +115,32 @@ export default function App() {
       await saveTransactions(derived)
       setTransactions(derived)
       setDetectedAccounts(result.detectedAccounts)
-      setReport(result.report)
+
+      // Что из файла пришло впервые: для отчёта «разложено / без категории»
+      // и очереди разбора прямо в отчёте.
+      const known = new Set(transactions.map((tx) => tx.key))
+      const fresh = derived.filter((tx) => !known.has(tx.key))
+      const uncategorizedKeys = fresh
+        .filter((tx) => isCountable(tx) && !tx.categoryId)
+        .sort((a, b) => b.amount - a.amount)
+        .map((tx) => tx.key)
+      setReport({
+        ...result.report,
+        fileName: file.name ?? null,
+        fileSize: file.size ?? null,
+        categorized: fresh.filter((tx) => tx.categoryId).length,
+        uncategorizedKeys,
+      })
+      setImports(recordImport({
+        name: file.name ?? 'выгрузка',
+        size: file.size ?? null,
+        importedAt: localIsoDate(),
+        added: result.report.added,
+        duplicates: result.report.duplicates,
+        rows: result.report.rows,
+        periodFrom: result.report.periodFrom,
+        periodTo: result.report.periodTo,
+      }))
     } catch (importError) {
       setError(importError.message)
     }
@@ -124,6 +151,12 @@ export default function App() {
     // This ensures the preset doesn't persist when returning via normal tab navigation
     if (screen === 'transactions' && nextScreen !== 'transactions') {
       setTransactionsPreset({ filters: {}, sort: 'date' })
+    }
+    // Отчёт — ответ на только что загруженный файл. Вернувшись на «Импорт» позже,
+    // человек ждёт зону загрузки и историю; неотвеченное предложение счетов остаётся.
+    if (screen === 'import' && nextScreen !== 'import') {
+      setReport(null)
+      setError(null)
     }
     setScreen(nextScreen)
   }
@@ -161,6 +194,25 @@ export default function App() {
           ownAccounts={settings.ownAccounts}
           error={error}
           disabled={!loaded}
+          imports={imports}
+          transactions={transactions}
+          categories={settings.categories}
+          onAssign={handleAssign}
+          onCreateRule={handleCreateRule}
+          onNavigate={handleNavigate}
+          onReset={() => { setReport(null); setError(null) }}
+          onReview={(fileReport) => {
+            // Очередь разбора — за период загруженного файла.
+            setTransactionsPreset({
+              filters: {
+                categoryId: NO_CATEGORY, countableOnly: true, currency: activeCurrency,
+                from: fileReport.periodFrom, to: fileReport.periodTo,
+              },
+              sort: 'amount',
+            })
+            setReport(null)
+            setScreen('transactions')
+          }}
         />
       )}
       {screen === 'overview' && (
@@ -170,6 +222,7 @@ export default function App() {
           currency={activeCurrency}
           loaded={loaded}
           onNavigate={handleNavigate}
+          lastImport={imports[0]?.importedAt ?? null}
         />
       )}
       {screen === 'transactions' && (

@@ -17,8 +17,8 @@ describe('ImportScreen', () => {
           periodFrom: '2026-07-22', periodTo: '2026-09-20' }}
       />,
     )
-    expect(screen.getByText(/добавлено: 254/i)).toBeTruthy()
-    expect(screen.getByText(/дублей: 0/i)).toBeTruthy()
+    expect(screen.getByTestId('report-added').textContent).toBe('254')
+    expect(screen.getByTestId('report-duplicates').textContent).toBe('0')
     expect(screen.getByText(/22\.07\.2026/)).toBeTruthy()
   })
 
@@ -112,7 +112,7 @@ describe('ImportScreen', () => {
       />,
     )
     // Check that report panel contains the unresolved count line
-    const reportPanel = container.querySelector('.panel')
+    const reportPanel = container.querySelector('[data-testid="import-report"]')
     expect(reportPanel.textContent).toMatch(/Требуют внимания: 0/)
     // Should not show the "unrecognised accounts" explanation with zero count
     expect(reportPanel.textContent).not.toMatch(/ни один счёт операции не опознан/)
@@ -129,7 +129,7 @@ describe('ImportScreen', () => {
     )
     expect(screen.getByText(/Файл повреждён/)).toBeTruthy()
     // The report panel should not be rendered when report is null
-    const reportPanel = container.querySelector('.panel')
+    const reportPanel = container.querySelector('[data-testid="import-report"]')
     expect(reportPanel).toBeNull()
   })
 

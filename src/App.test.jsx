@@ -56,11 +56,11 @@ describe('App import flow', () => {
 
       // Wait for report to appear
       await waitFor(() => {
-        expect(screen.getByText(/Импорт завершён/)).toBeTruthy()
+        expect(screen.getByText(/Файл загружен/)).toBeTruthy()
       })
 
       // Verify success report is shown
-      expect(screen.getByText(/Добавлено:/)).toBeTruthy()
+      expect(screen.getByTestId('report-added')).toBeTruthy()
 
       // Second import: mock failure
       importSpy.mockImplementationOnce(() => {
@@ -76,8 +76,8 @@ describe('App import flow', () => {
       })
 
       // Verify: old report must be gone, only error shown
-      expect(screen.queryByText(/Импорт завершён/)).toBeNull()
-      expect(screen.queryByText(/Добавлено:/)).toBeNull()
+      expect(screen.queryByText(/Файл загружен/)).toBeNull()
+      expect(screen.queryByTestId('report-added')).toBeNull()
     } finally {
       importSpy.mockRestore()
     }
@@ -243,7 +243,7 @@ describe('App currency selection does not outlive its data', () => {
       // Импорт открывается только после первой загрузки хранилища.
       await waitFor(() => expect(fileInput.disabled).toBe(false))
       fireEvent.change(fileInput, { target: { files: [new File([new Uint8Array([1, 2, 3])], 'a.xlsx')] } })
-      // Оба отчёта об импорте говорят «Импорт завершён» — ждать нужно чего-то,
+      // Оба отчёта об импорте говорят «Файл загружен» — ждать нужно чего-то,
       // что различает первый отчёт от второго, иначе waitFor может решить, что
       // готово, по ещё не сброшенному прежнему отчёту.
       await waitFor(() => expect(screen.getByText('Строк в файле: 2')).toBeTruthy())
