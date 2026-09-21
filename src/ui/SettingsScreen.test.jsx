@@ -265,3 +265,58 @@ describe('SettingsScreen', () => {
     await vi.waitFor(() => expect(onChange).toHaveBeenCalledTimes(2))
   })
 })
+
+describe('SettingsScreen: свой счёт вручную', () => {
+  const addAccount = (value) => {
+    fireEvent.change(screen.getByPlaceholderText('Номер счёта'), { target: { value } })
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить' }))
+  }
+
+  it('добавляет счёт, убирая пробелы, и держит список отсортированным', () => {
+    const onChange = vi.fn()
+    render(<SettingsScreen settings={{ ...defaultSettings(), ownAccounts: ['1570000000000009'] }} onChange={onChange} />)
+    addAccount(' 1570 0000 0000 0001 ')
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      ownAccounts: ['1570000000000001', '1570000000000009'],
+    }))
+  })
+
+  it('не принимает то, что не похоже на номер счёта', () => {
+    const onChange = vi.fn()
+    render(<SettingsScreen settings={defaultSettings()} onChange={onChange} />)
+    addAccount('12ab')
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByText(/только цифры/i)).toBeTruthy()
+  })
+
+  it('не добавляет счёт второй раз', () => {
+    const onChange = vi.fn()
+    render(<SettingsScreen settings={{ ...defaultSettings(), ownAccounts: ['1570000000000001'] }} onChange={onChange} />)
+    addAccount('1570000000000001')
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByText(/уже в списке/i)).toBeTruthy()
+  })
+})
+
+describe('SettingsScreen: правило вручную', () => {
+  it('новое правило встаёт первым — самым приоритетным', () => {
+    const onChange = vi.fn()
+    const settings = { ...defaultSettings(), rules: [{ match: 'OLD', category: 'groceries' }] }
+    render(<SettingsScreen settings={settings} onChange={onChange} />)
+    fireEvent.change(screen.getByPlaceholderText('Текст в деталях'), { target: { value: '  CORN  ' } })
+    fireEvent.change(screen.getByLabelText('Категория нового правила'), { target: { value: 'cafe' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить правило' }))
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      rules: [{ match: 'CORN', category: 'cafe' }, { match: 'OLD', category: 'groceries' }],
+    }))
+  })
+
+  it('без текста или без категории правило не создаётся', () => {
+    const onChange = vi.fn()
+    render(<SettingsScreen settings={defaultSettings()} onChange={onChange} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить правило' }))
+    fireEvent.change(screen.getByPlaceholderText('Текст в деталях'), { target: { value: 'CORN' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить правило' }))
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})

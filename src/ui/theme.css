@@ -564,3 +564,34 @@ button.chip { background-image: none; padding-right: 14px; }
 .check-row input { width: 20px; height: 20px; accent-color: var(--accent); margin: 0; }
 
 .queue-row .chip-select { flex: none; max-width: 48%; }
+
+/* ---------- Настройки ---------- */
+
+.tile-list { display: flex; flex-direction: column; gap: 8px; }
+.account-row { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 6px 0 14px; }
+.account-row .amount { flex: 1; font-size: 16px; }
+.inline-form { display: flex; gap: 8px; margin-top: 12px; }
+.inline-form .field { flex: 1; min-width: 0; }
+.inline-form .btn { flex: none; min-width: 96px; font-size: 16px; font-weight: 600; }
+
+.rule-form { display: flex; gap: 8px; margin-bottom: 14px; }
+.rule-form .field { flex: 1; min-width: 0; }
+.rule-form-category { flex: none; max-width: 40%; }
+.rule-form .icon-btn:disabled { opacity: .45; }
+.rule-row { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 14px; }
+.rule-row-main { flex: 1; min-width: 0; }
+.rule-row-match { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.rule-row-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 13px; color: var(--text-2); }
+.rule-row-meta .dot { width: 7px; height: 7px; border-radius: 2px; }
+.rule-row .icon-btn:disabled { opacity: .35; }
+
+.files-text { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.files-text b { color: var(--text-2); font-weight: 600; }
+.files-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.file-button { position: relative; overflow: hidden; cursor: pointer; font-weight: 600; }
+.file-button input { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+
+@media (min-width: 900px) {
+  .settings { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  .settings > [data-testid='settings-files'] { grid-column: 1 / -1; }
+}
