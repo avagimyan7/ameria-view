@@ -44,14 +44,14 @@ export function TransactionsScreen({
         <input placeholder="Поиск по деталям" onChange={set('query')} />
         <input type="date" onChange={set('from')} />
         <input type="date" onChange={set('to')} />
-        <select onChange={set('direction')}>
+        <select value={filters.direction ?? ''} onChange={set('direction')}>
           <option value="">Все направления</option>
           <option value="expense">Расходы</option>
           <option value="income">Доходы</option>
           <option value="internal">Между своими счетами</option>
           <option value="unresolved">Требуют внимания</option>
         </select>
-        <select onChange={set('categoryId')}>
+        <select value={filters.categoryId ?? ''} onChange={set('categoryId')}>
           <option value="">Все категории</option>
           <option value={NO_CATEGORY}>Без категории</option>
           {categories.map((category) => (

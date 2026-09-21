@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { CategoriesScreen } from './CategoriesScreen.jsx'
 import { SEED_CATEGORIES } from '../rules/seed.js'
+import { formatAmd } from './format.js'
 
 const tx = (over) => ({
   key: Math.random().toString(36), date: '2026-09-10', opType: 'Քարտային գործարք',
@@ -27,8 +28,9 @@ describe('CategoriesScreen', () => {
     // Имя категории и сумма встречаются и в полосах, и в таблице бюджетов,
     // поэтому проверяем наличие, а не единственность.
     expect(screen.getAllByText('Продукты').length).toBeGreaterThan(0)
-    // Check for "1 000 ֏" (1000 AMD) - use a flexible matcher for whitespace
-    expect(screen.getAllByText((content) => content.includes('1') && content.includes('000')).length).toBeGreaterThan(0)
+    // Check for exactly "1 000 ֏" in the bars (100000 luma)
+    const expected = formatAmd(100000)
+    expect(screen.getByRole('table').textContent).toContain(expected)
   })
 
   it('показывает бюджет, факт и прогноз', () => {
@@ -36,16 +38,50 @@ describe('CategoriesScreen', () => {
       <CategoriesScreen {...props} budgets={{ groceries: 300000 }}
         transactions={[tx({ amount: 50000, date: '2026-09-01' })]} />,
     )
-    expect(screen.getByTestId('budget-groceries-spent').textContent).toMatch(/500/)
-    expect(screen.getByTestId('budget-groceries-projected').textContent).toMatch(/1.*500/)
+    // Spent should show exactly what was spent (50000 luma = 500 AMD)
+    expect(screen.getByTestId('budget-groceries-spent').textContent).toBe(formatAmd(50000))
+    // Projected should show the extrapolated total based on spending rate
+    // With 10 days elapsed (Sept 1-10) and 50000 luma spent, daily rate = 5000
+    // Full month (30 days) would be 150000 luma = 1500 AMD
+    const projectedText = screen.getByTestId('budget-groceries-projected').textContent
+    expect(projectedText).toBe(formatAmd(150000))
   })
 
-  it('предупреждает о дне перерасхода', () => {
+  it('показывает траты даже категориям без лимита', () => {
+    render(
+      <CategoriesScreen {...props} budgets={{}}
+        transactions={[tx({ categoryId: 'transport', amount: 145770 })]} />,
+    )
+    // Transport category has no limit set, but should still show spending
+    expect(screen.getByTestId('budget-transport-spent').textContent).toBe(formatAmd(145770))
+  })
+
+  it('запрещает отрицательные лимиты', () => {
+    const onChangeBudget = vi.fn()
+    render(
+      <CategoriesScreen {...props} onChangeBudget={onChangeBudget} transactions={[tx()]} />,
+    )
+    fireEvent.change(screen.getByTestId('budget-groceries-limit'), { target: { value: '-500' } })
+    // Should clamp to 0
+    expect(onChangeBudget).toHaveBeenCalledWith('groceries', 0)
+  })
+
+  it('предупреждает о дне перерасхода когда лимит не превышен', () => {
     render(
       <CategoriesScreen {...props} budgets={{ groceries: 100000 }}
         transactions={[tx({ amount: 50000, date: '2026-09-01' })]} />,
     )
+    // Spending is under limit, so should show forecast day
     expect(screen.getByTestId('budget-groceries-overrun').textContent).toMatch(/20/)
+  })
+
+  it('показывает превышен когда лимит уже нарушен', () => {
+    render(
+      <CategoriesScreen {...props} budgets={{ groceries: 100000 }}
+        transactions={[tx({ amount: 150000, date: '2026-09-01' })]} />,
+    )
+    // Spending exceeds limit, should show "превышен"
+    expect(screen.getByTestId('budget-groceries-overrun').textContent).toBe('превышен')
   })
 
   it('сообщает, сколько денег осталось без категории, и ведёт разбирать', () => {
