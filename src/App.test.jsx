@@ -5,6 +5,7 @@ import * as pipelineModule from './import/pipeline.js'
 import App from './App.jsx'
 import { clearTransactions, saveTransactions } from './store/db.js'
 import { NO_CATEGORY } from './stats/filter.js'
+import { formatMoney } from './ui/format.js'
 
 describe('App import flow', () => {
   beforeEach(async () => {
@@ -130,5 +131,45 @@ describe('App transactions preset reset on navigation', () => {
 
     expect(findCategoryFilterSelect().value).toBe('')
     expect(screen.queryByText(/Только учитываемые операции/)).toBeNull()
+  })
+})
+
+describe('App currency switcher', () => {
+  beforeEach(async () => {
+    cleanup()
+    await clearTransactions()
+    localStorage.clear()
+  })
+
+  afterEach(async () => {
+    cleanup()
+    await clearTransactions()
+  })
+
+  it('не показывается, пока все операции в одной валюте — вся выгрузка владельца сегодня в AMD', async () => {
+    await saveTransactions([uncategorizedTx({ key: 'amd-1', categoryId: 'groceries', currency: 'AMD' })])
+
+    render(<App />)
+    await screen.findByTestId('total-expense')
+
+    expect(screen.queryByLabelText('Валюта')).toBeNull()
+  })
+
+  it('появляется при нескольких валютах и переключает статистику обзора без смешивания сумм', async () => {
+    await saveTransactions([
+      uncategorizedTx({ key: 'amd-1', categoryId: 'groceries', currency: 'AMD', amount: 100000 }),
+      uncategorizedTx({ key: 'usd-1', categoryId: 'groceries', currency: 'USD', amount: 5000 }),
+    ])
+
+    render(<App />)
+    await screen.findByTestId('total-expense')
+
+    const select = screen.getByLabelText('Валюта')
+    // По умолчанию выбрана первая встреченная валюта (AMD) — расход показан в драмах,
+    // а не как ошибочная сумма 105000, полученная сложением AMD и USD.
+    expect(screen.getByTestId('total-expense').textContent).toBe(formatMoney(100000, 'AMD'))
+
+    fireEvent.change(select, { target: { value: 'USD' } })
+    expect(screen.getByTestId('total-expense').textContent).toBe(formatMoney(5000, 'USD'))
   })
 })

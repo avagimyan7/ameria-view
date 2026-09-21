@@ -1,6 +1,6 @@
-import { formatAmd } from '../format.js'
+import { formatMoney } from '../format.js'
 
-export function CategoryBars({ rows, categories }) {
+export function CategoryBars({ rows, categories, currency = null }) {
   if (rows.length === 0) return null
   const peak = Math.max(...rows.map((row) => row.amount), 1)
   const nameOf = (id) => categories.find((c) => c.id === id)?.name ?? 'Без категории'
@@ -12,7 +12,7 @@ export function CategoryBars({ rows, categories }) {
         <div key={row.categoryId ?? 'none'} style={{ marginBottom: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
             <span>{nameOf(row.categoryId)}</span>
-            <span>{formatAmd(row.amount)}</span>
+            <span>{formatMoney(row.amount, currency)}</span>
           </div>
           <div style={{ background: 'var(--line)', borderRadius: 3, height: 8 }}>
             <div style={{

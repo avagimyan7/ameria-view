@@ -9,6 +9,11 @@ export function filterTransactions(transactions, filters = {}) {
     // If countableOnly is set, exclude non-countable transactions
     if (filters.countableOnly && !isCountable(tx)) return false
 
+    // Курсов банк не даёт, поэтому там, где считают деньги (пресет «Разобрать»,
+    // связанный с uncategorized()), фильтр обязан знать ту же валюту — иначе
+    // множества «сколько неразобранного» и «что показано после клика» разойдутся.
+    if (filters.currency && tx.currency !== filters.currency) return false
+
     if (query) {
       const haystack = `${tx.details} ${tx.counterparty} ${tx.comment}`.toUpperCase()
       if (!haystack.includes(query)) return false

@@ -79,4 +79,35 @@ describe('filterTransactions', () => {
     expect(preset).toHaveLength(2)
     expect(preset.length).toBe(queue.length)
   })
+
+  it('то же равенство держится и на смешанных валютах, если обеим сторонам передана одна и та же валюта', () => {
+    // Банк не даёт курсов, поэтому AMD и USD нельзя складывать и нельзя молча смешивать
+    // в одной очереди разбора. Без currency в filterTransactions пресет «Разобрать»
+    // включил бы обе валюты, а uncategorized(list, 'AMD') — только одну, и счётчики
+    // на экране категорий разошлись бы с тем, что реально показывается после клика.
+    const list = [
+      tx({ direction: 'expense', categoryId: null, currency: 'AMD' }),
+      tx({ direction: 'income', categoryId: null, currency: 'AMD' }),
+      tx({ direction: 'expense', categoryId: null, currency: 'USD' }),
+      tx({ direction: 'income', categoryId: null, currency: 'USD' }),
+      // Разобранная операция в AMD — не должна попасть ни туда, ни туда.
+      tx({ direction: 'expense', categoryId: 'groceries', currency: 'AMD' }),
+    ]
+
+    const queueAmd = uncategorized(list, 'AMD')
+    const presetAmd = filterTransactions(list, {
+      categoryId: NO_CATEGORY, countableOnly: true, currency: 'AMD',
+    })
+    expect(queueAmd).toHaveLength(2)
+    expect(presetAmd).toHaveLength(2)
+    expect(presetAmd.length).toBe(queueAmd.length)
+
+    const queueUsd = uncategorized(list, 'USD')
+    const presetUsd = filterTransactions(list, {
+      categoryId: NO_CATEGORY, countableOnly: true, currency: 'USD',
+    })
+    expect(queueUsd).toHaveLength(2)
+    expect(presetUsd).toHaveLength(2)
+    expect(presetUsd.length).toBe(queueUsd.length)
+  })
 })

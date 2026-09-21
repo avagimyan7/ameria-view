@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './ui/theme.css'
 import { Layout } from './ui/Layout.jsx'
 import { ImportScreen } from './ui/ImportScreen.jsx'
@@ -10,7 +10,7 @@ import { importWorkbook } from './import/pipeline.js'
 import { applyCategories } from './rules/match.js'
 import { loadSettings, saveSettings } from './store/settings.js'
 import { loadTransactions, saveTransactions } from './store/db.js'
-import { byMonth } from './stats/aggregate.js'
+import { byMonth, currenciesOf } from './stats/aggregate.js'
 import { NO_CATEGORY } from './stats/filter.js'
 
 export default function App() {
@@ -21,6 +21,13 @@ export default function App() {
   const [detectedAccounts, setDetectedAccounts] = useState([])
   const [error, setError] = useState(null)
   const [transactionsPreset, setTransactionsPreset] = useState({ filters: {}, sort: 'date' })
+
+  // Банк не даёт курсов обмена, поэтому смешивать AMD и, например, USD в одной сумме
+  // нельзя — агрегаты падают, если валют несколько, а какая нужна не сказано явно.
+  // По умолчанию берём первую встреченную валюту; переключатель ниже позволяет сменить.
+  const currencies = useMemo(() => currenciesOf(transactions), [transactions])
+  const [currency, setCurrency] = useState(null)
+  const activeCurrency = currency ?? currencies[0] ?? null
 
   useEffect(() => {
     loadTransactions().then((stored) => {
@@ -78,6 +85,22 @@ export default function App() {
 
   return (
     <Layout screen={screen} onNavigate={handleNavigate}>
+      {currencies.length > 1 && (
+        <div className="panel" style={{ marginBottom: 12 }}>
+          <label>
+            Валюта:{' '}
+            <select
+              aria-label="Валюта"
+              value={activeCurrency ?? ''}
+              onChange={(event) => setCurrency(event.target.value)}
+            >
+              {currencies.map((code) => (
+                <option key={code} value={code}>{code}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       {screen === 'import' && (
         <ImportScreen
           onImport={handleImport}
@@ -89,7 +112,11 @@ export default function App() {
         />
       )}
       {screen === 'overview' && (
-        <OverviewScreen transactions={transactions} categories={settings.categories} />
+        <OverviewScreen
+          transactions={transactions}
+          categories={settings.categories}
+          currency={activeCurrency}
+        />
       )}
       {screen === 'transactions' && (
         <TransactionsScreen
@@ -107,12 +134,16 @@ export default function App() {
           transactions={transactions}
           categories={settings.categories}
           budgets={settings.budgets}
-          month={byMonth(transactions).slice(-1)[0]?.month ?? new Date().toISOString().slice(0, 7)}
+          month={byMonth(transactions, activeCurrency).slice(-1)[0]?.month ?? new Date().toISOString().slice(0, 7)}
           today={new Date().toISOString().slice(0, 10)}
+          currency={activeCurrency}
           onChangeBudget={(categoryId, limit) =>
             updateSettings({ ...settings, budgets: { ...settings.budgets, [categoryId]: limit } })}
           onShowUncategorized={() => {
-            setTransactionsPreset({ filters: { categoryId: NO_CATEGORY, countableOnly: true }, sort: 'amount' })
+            setTransactionsPreset({
+              filters: { categoryId: NO_CATEGORY, countableOnly: true, currency: activeCurrency },
+              sort: 'amount',
+            })
             setScreen('transactions')
           }}
         />

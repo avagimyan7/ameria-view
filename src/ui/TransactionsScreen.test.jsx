@@ -121,6 +121,18 @@ describe('TransactionsScreen', () => {
     expect(onCreateRule).toHaveBeenCalledWith({ match: 'ASK 23 LLC YEREVAN AM', category: 'groceries' })
   })
 
+  it('подписывает сумму операции её собственной валютой, а не всегда драмом', () => {
+    cleanup()
+    render(
+      <TransactionsScreen
+        transactions={[tx({ currency: 'USD', amount: 5000 })]}
+        categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={noop} />,
+    )
+    const rows = screen.getAllByRole('row')
+    expect(rows[1].textContent).toContain('50 USD')
+    expect(rows[1].textContent).not.toContain('֏')
+  })
+
   it('категория фильтра контролируется и отражает начальные фильтры', () => {
     cleanup()
     render(
