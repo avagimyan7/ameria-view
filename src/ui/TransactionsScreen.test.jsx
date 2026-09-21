@@ -21,10 +21,8 @@ describe('TransactionsScreen', () => {
         onAssign={noop} onCreateRule={noop} />,
     )
     expect(screen.getByText(/ASK 23 LLC/)).toBeTruthy()
-    // Check the table rows - the first data row contains the amount
-    const rows = screen.getAllByRole('row')
-    expect(rows.length).toBeGreaterThanOrEqual(2) // header + at least one data row
-    expect(/1 000/.test(rows[1].textContent)).toBeTruthy()
+    // Карточка операции несёт её сумму.
+    expect(/1 000/.test(screen.getByTestId('tx-k1').textContent)).toBeTruthy()
   })
 
   it('сужает список по поисковой строке', () => {
@@ -35,7 +33,7 @@ describe('TransactionsScreen', () => {
         categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={noop} />,
     )
     fireEvent.change(screen.getByPlaceholderText(/поиск/i), { target: { value: 'ASK' } })
-    expect(screen.getAllByRole('row')).toHaveLength(2) // заголовок + одна операция
+    expect(screen.getAllByTestId(/^tx-/)).toHaveLength(1) // осталась одна операция
   })
 
   it('при выборе категории сообщает ключ операции', () => {
@@ -77,25 +75,20 @@ describe('TransactionsScreen', () => {
         ]}
         categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={noop} />,
     )
-    // Get the table rows (skip header)
-    const rows = screen.getAllByRole('row')
-    expect(rows.length).toBeGreaterThanOrEqual(4) // header + 3 data rows
+    const amountOf = (key) => screen.getByTestId(`tx-${key}`).querySelector('.tx-amount')
 
-    // Find amount cells and check their classes
-    const amountCells = Array.from(document.querySelectorAll('td.num'))
-    expect(amountCells.length).toBeGreaterThanOrEqual(3)
+    // Расход — красный и со знаком минус.
+    expect(amountOf('k1').className).toContain('expense')
+    expect(amountOf('k1').textContent.startsWith('−')).toBe(true)
 
-    // First row (expense) should have 'expense' class
-    expect(amountCells[0].className).toContain('expense')
-    expect(amountCells[0].className).not.toContain('muted')
+    // Перевод между своими счетами — нейтральный серый и без знака: это не трата.
+    expect(amountOf('k2').className).not.toContain('expense')
+    expect(amountOf('k2').className).toContain('transfer')
+    expect(amountOf('k2').textContent.startsWith('−')).toBe(false)
 
-    // Second row (internal) should NOT have 'expense' class, should be 'muted'
-    expect(amountCells[1].className).not.toContain('expense')
-    expect(amountCells[1].className).toContain('muted')
-
-    // Third row (unresolved) should NOT have 'expense' class, should be 'muted'
-    expect(amountCells[2].className).not.toContain('expense')
-    expect(amountCells[2].className).toContain('muted')
+    // Неопознанная операция — тоже не расход, приглушённая.
+    expect(amountOf('k3').className).not.toContain('expense')
+    expect(amountOf('k3').className).toContain('muted')
   })
 
   it('предлагает создать правило и показывает, скольких операций оно коснётся', () => {
@@ -115,7 +108,7 @@ describe('TransactionsScreen', () => {
     // Preview excludes source transaction (k1), counts k2 and k3 (both match ASK 23 LLC), not k4 (DIFFERENT)
     // count = 2 (k2 and k3), amount = 100000 + 100000 = 200000 luma = 2000 AMD
     expect(screen.getByText(/затронет ещё 2 операции на/i)).toBeTruthy()
-    const previewPanel = screen.getByText(/затронет ещё 2/i).closest('.panel')
+    const previewPanel = screen.getByText(/затронет ещё 2/i).closest('[data-testid="rule-preview"]')
     expect(/2\s000\s֏/.test(previewPanel.textContent)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /создать правило/i }))
     expect(onCreateRule).toHaveBeenCalledWith({
@@ -143,7 +136,7 @@ describe('TransactionsScreen', () => {
     fireEvent.change(screen.getByTestId('assign-in1'), { target: { value: 'salary' } })
 
     // Превью описывает именно то правило, которое будет создано: только входящие.
-    const previewPanel = screen.getByText(/затронет ещё/i).closest('.panel')
+    const previewPanel = screen.getByText(/затронет ещё/i).closest('[data-testid="rule-preview"]')
     expect(previewPanel.textContent).toMatch(/затронет ещё 1 операцию на/)
     expect(previewPanel.textContent).toMatch(/на 2\s000\s֏/)
     expect(previewPanel.textContent).toMatch(/только доходы/)
@@ -167,7 +160,7 @@ describe('TransactionsScreen', () => {
         categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={noop} />,
     )
     fireEvent.change(screen.getByTestId('assign-k1'), { target: { value: 'groceries' } })
-    const previewPanel = screen.getByText(/затронет ещё 1/i).closest('.panel')
+    const previewPanel = screen.getByText(/затронет ещё 1/i).closest('[data-testid="rule-preview"]')
     expect(previewPanel.textContent).toContain('30 USD')
     expect(previewPanel.textContent).not.toContain('֏')
   })
@@ -188,7 +181,7 @@ describe('TransactionsScreen', () => {
     )
     fireEvent.change(screen.getByTestId('assign-k1'), { target: { value: 'groceries' } })
     // count = 2: k2 (AMD) и k3 (USD) оба совпадают текстом, k1 исключён как источник.
-    const previewPanel = screen.getByText(/затронет ещё 2/i).closest('.panel')
+    const previewPanel = screen.getByText(/затронет ещё 2/i).closest('[data-testid="rule-preview"]')
     expect(previewPanel.textContent).toMatch(/нескольких валютах/)
     expect(previewPanel.textContent).not.toContain('֏')
     expect(previewPanel.textContent).not.toContain('USD')
@@ -201,9 +194,9 @@ describe('TransactionsScreen', () => {
         transactions={[tx({ currency: 'USD', amount: 5000 })]}
         categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={noop} />,
     )
-    const rows = screen.getAllByRole('row')
-    expect(rows[1].textContent).toContain('50 USD')
-    expect(rows[1].textContent).not.toContain('֏')
+    const card = screen.getByTestId('tx-k1')
+    expect(card.textContent).toContain('50 USD')
+    expect(card.textContent).not.toContain('֏')
   })
 
   it('категория фильтра контролируется и отражает начальные фильтры', () => {

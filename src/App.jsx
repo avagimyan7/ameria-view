@@ -182,6 +182,7 @@ export default function App() {
           initialFilters={transactionsPreset.filters}
           initialSort={transactionsPreset.sort}
           currency={activeCurrency}
+          accounts={settings.ownAccounts}
         />
       )}
       {screen === 'categories' && (

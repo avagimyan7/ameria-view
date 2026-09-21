@@ -58,3 +58,23 @@ export function formatDayMonth(iso) {
   const [, month, day] = iso.split('-')
   return `${day}.${month}`
 }
+
+// «19 сентября» — заголовок дня в списке операций.
+export function formatDayLong(iso) {
+  if (!iso) return ''
+  const names = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля',
+    'августа', 'сентября', 'октября', 'ноября', 'декабря']
+  const [, month, day] = iso.split('-')
+  return `${Number(day)} ${names[Number(month) - 1]}`
+}
+
+// Прозрачная подложка цвета категории: цвет приходит из данных (hex) или
+// переменной темы, поэтому смешиваем средствами CSS, а не разбором строки.
+export function tint(color, percent = 14) {
+  return `color-mix(in srgb, ${color} ${percent}%, transparent)`
+}
+
+// Подпись валюты без суммы: «֏» для драма (и неизвестной валюты), иначе код.
+export function currencyLabel(currency) {
+  return currency && currency !== 'AMD' ? currency : '֏'
+}
