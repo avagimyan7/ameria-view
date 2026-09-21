@@ -50,4 +50,35 @@ describe('ImportScreen', () => {
       '1570000000000002',
     ])
   })
+
+  it('показывает ноль требующих внимания без упоминания счётов', () => {
+    const { container } = render(
+      <ImportScreen
+        onImport={() => {}}
+        onConfirmAccounts={() => {}}
+        report={{ rows: 10, added: 10, duplicates: 0, unresolved: 0,
+          periodFrom: '2026-09-01', periodTo: '2026-09-10' }}
+      />,
+    )
+    // Check that report panel contains the unresolved count line
+    const reportPanel = container.querySelector('.panel')
+    expect(reportPanel.textContent).toMatch(/Требуют внимания: 0/)
+    // Should not show the "unrecognised accounts" explanation with zero count
+    expect(reportPanel.textContent).not.toMatch(/ни один счёт операции не опознан/)
+  })
+
+  it('не показывает старый отчёт когда есть ошибка', () => {
+    const { container } = render(
+      <ImportScreen
+        onImport={() => {}}
+        onConfirmAccounts={() => {}}
+        report={null}
+        error="Файл повреждён"
+      />,
+    )
+    expect(screen.getByText(/Файл повреждён/)).toBeTruthy()
+    // The report panel should not be rendered when report is null
+    const reportPanel = container.querySelector('.panel')
+    expect(reportPanel).toBeNull()
+  })
 })
