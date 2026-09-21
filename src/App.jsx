@@ -3,6 +3,7 @@ import './ui/theme.css'
 import { Layout } from './ui/Layout.jsx'
 import { ImportScreen } from './ui/ImportScreen.jsx'
 import { OverviewScreen } from './ui/OverviewScreen.jsx'
+import { TransactionsScreen } from './ui/TransactionsScreen.jsx'
 import { importWorkbook } from './import/pipeline.js'
 import { applyCategories } from './rules/match.js'
 import { loadSettings, saveSettings } from './store/settings.js'
@@ -29,6 +30,12 @@ export default function App() {
     saveSettings(next)
     setTransactions((current) => applyCategories(current, next))
   }
+
+  const handleAssign = (key, categoryId) =>
+    updateSettings({ ...settings, overrides: { ...settings.overrides, [key]: categoryId } })
+
+  const handleCreateRule = (rule) =>
+    updateSettings({ ...settings, rules: [rule, ...settings.rules] })
 
   const handleImport = async (bytesOrError) => {
     try {
@@ -70,7 +77,15 @@ export default function App() {
       {screen === 'overview' && (
         <OverviewScreen transactions={transactions} categories={settings.categories} />
       )}
-      {['categories', 'transactions', 'settings'].includes(screen) && (
+      {screen === 'transactions' && (
+        <TransactionsScreen
+          transactions={transactions}
+          categories={settings.categories}
+          onAssign={handleAssign}
+          onCreateRule={handleCreateRule}
+        />
+      )}
+      {['categories', 'settings'].includes(screen) && (
         <p className="muted">Экран в разработке</p>
       )}
     </Layout>
