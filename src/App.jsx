@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import './ui/theme.css'
 import { Layout } from './ui/Layout.jsx'
 import { ImportScreen } from './ui/ImportScreen.jsx'
+import { OverviewScreen } from './ui/OverviewScreen.jsx'
 import { importWorkbook } from './import/pipeline.js'
 import { applyCategories } from './rules/match.js'
 import { loadSettings, saveSettings } from './store/settings.js'
@@ -66,7 +67,12 @@ export default function App() {
           error={error}
         />
       )}
-      {screen !== 'import' && <p className="muted">Экран в разработке</p>}
+      {screen === 'overview' && (
+        <OverviewScreen transactions={transactions} categories={settings.categories} />
+      )}
+      {['categories', 'transactions', 'settings'].includes(screen) && (
+        <p className="muted">Экран в разработке</p>
+      )}
     </Layout>
   )
 }
