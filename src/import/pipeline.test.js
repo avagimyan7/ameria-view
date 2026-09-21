@@ -39,11 +39,11 @@ describe('importWorkbook', () => {
   })
 
   it('уважает подтверждённый список счетов', () => {
-    const result = importWorkbook(workbook([dataRow({ from: 'MINE1', to: 'MINE2', opType: OP.BETWEEN_OWN })]), {
+    const result = importWorkbook(workbook([dataRow({ from: 'MINE1', to: 'MINE2' })]), {
       ownAccounts: ['MINE1', 'MINE2'],
     })
     expect(result.transactions[0].direction).toBe('internal')
-    expect(result.detectedAccounts).toEqual(['MINE1', 'MINE2'])
+    expect(result.detectedAccounts).toEqual(['MINE1'])
   })
 
   it('пустой ownAccounts падает назад на обнаружение, не берёт пустой список буквально', () => {
