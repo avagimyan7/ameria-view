@@ -1,7 +1,53 @@
 import { useState } from 'react'
 import { formatDate, maskAccount } from './format.js'
 
-export function ImportScreen({ onImport, onConfirmAccounts, report, detectedAccounts = [], ownAccounts = [], error }) {
+// Предложение подтвердить новые счета. Отдельный компонент, чтобы выбор галочек
+// сбрасывался вместе со списком (он смонтирован с key по этому списку).
+function AccountsPrompt({ accounts, onConfirm, onDecline }) {
+  const [unchecked, setUnchecked] = useState(() => new Set())
+  const toggle = (account) =>
+    setUnchecked((current) => {
+      const next = new Set(current)
+      if (next.has(account)) next.delete(account)
+      else next.add(account)
+      return next
+    })
+  const selected = accounts.filter((account) => !unchecked.has(account))
+
+  return (
+    <div className="panel" style={{ marginTop: 20 }} data-testid="accounts-prompt">
+      <h3>Найденные счета</h3>
+      <p className="muted">
+        Эти счета похожи на твои, но ещё не подтверждены. От них зависит, что считается
+        доходом, что расходом, а что — перекладыванием между своими счетами.
+        Подтверждённые добавятся к уже известным и пересчитают всю историю.
+      </p>
+      <ul>
+        {accounts.map((account) => (
+          <li key={account}>
+            <label>
+              <input
+                type="checkbox"
+                checked={!unchecked.has(account)}
+                onChange={() => toggle(account)}
+              />{' '}
+              {maskAccount(account)}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <button type="button" disabled={selected.length === 0} onClick={() => onConfirm(selected)}>
+        Подтвердить счета
+      </button>{' '}
+      <button type="button" onClick={onDecline}>Не мои</button>
+    </div>
+  )
+}
+
+export function ImportScreen({
+  onImport, onConfirmAccounts, onDeclineAccounts = () => {}, report, detectedAccounts = [],
+  ownAccounts = [], error,
+}) {
   const [isOver, setIsOver] = useState(false)
 
   const readFile = (file) => {
@@ -15,7 +61,12 @@ export function ImportScreen({ onImport, onConfirmAccounts, report, detectedAcco
     reader.readAsArrayBuffer(file)
   }
 
-  const needsConfirmation = detectedAccounts.length > 0 && ownAccounts.length === 0
+  // Спрашиваем о каждом найденном счёте, которого ещё нет среди подтверждённых, —
+  // а не только при пустом списке: иначе новый свой счёт никогда не будет предложен,
+  // и переводы на него навсегда останутся расходами. Счёт, который человек убрал
+  // в настройках, тоже попадёт сюда, но только как предложение, от которого можно
+  // отказаться, — молча он обратно не вернётся.
+  const newAccounts = detectedAccounts.filter((account) => !ownAccounts.includes(account))
 
   return (
     <div>
@@ -72,21 +123,13 @@ export function ImportScreen({ onImport, onConfirmAccounts, report, detectedAcco
         </div>
       )}
 
-      {needsConfirmation && (
-        <div className="panel" style={{ marginTop: 20 }}>
-          <h3>Найденные счета</h3>
-          <p className="muted">
-            Эти счета определены как твои. От них зависит, что считается доходом, а что расходом.
-          </p>
-          <ul>
-            {detectedAccounts.map((account) => (
-              <li key={account}>{maskAccount(account)}</li>
-            ))}
-          </ul>
-          <button type="button" onClick={() => onConfirmAccounts(detectedAccounts)}>
-            Подтвердить счета
-          </button>
-        </div>
+      {newAccounts.length > 0 && (
+        <AccountsPrompt
+          key={newAccounts.join(',')}
+          accounts={newAccounts}
+          onConfirm={onConfirmAccounts}
+          onDecline={onDeclineAccounts}
+        />
       )}
     </div>
   )

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { ImportScreen } from './ImportScreen.jsx'
 
 describe('ImportScreen', () => {
@@ -49,6 +49,57 @@ describe('ImportScreen', () => {
       '1570000000000001',
       '1570000000000002',
     ])
+  })
+
+  it('предлагает только новые счета — те, что ещё не подтверждены', () => {
+    const onConfirmAccounts = vi.fn()
+    const { container } = render(
+      <ImportScreen
+        onImport={() => {}}
+        onConfirmAccounts={onConfirmAccounts}
+        detectedAccounts={['1570000000000001', '1570000000000002', '1570000000000003']}
+        ownAccounts={['1570000000000001', '1570000000000002']}
+      />,
+    )
+    const prompt = within(container).getByTestId('accounts-prompt')
+    expect(prompt.textContent).toContain('1570…0003')
+    expect(prompt.textContent).not.toContain('1570…0001')
+    expect(prompt.textContent).not.toContain('1570…0002')
+    fireEvent.click(within(prompt).getByRole('button', { name: /подтвердить счета/i }))
+    expect(onConfirmAccounts).toHaveBeenCalledWith(['1570000000000003'])
+  })
+
+  it('не спрашивает, если все найденные счета уже подтверждены', () => {
+    const { container } = render(
+      <ImportScreen
+        onImport={() => {}}
+        onConfirmAccounts={() => {}}
+        detectedAccounts={['1570000000000001', '1570000000000002']}
+        ownAccounts={['1570000000000002', '1570000000000001']}
+      />,
+    )
+    expect(within(container).queryByTestId('accounts-prompt')).toBeNull()
+  })
+
+  it('даёт отказаться от предложенных счетов и снять галочку с отдельного', () => {
+    const onConfirmAccounts = vi.fn()
+    const onDeclineAccounts = vi.fn()
+    const { container } = render(
+      <ImportScreen
+        onImport={() => {}}
+        onConfirmAccounts={onConfirmAccounts}
+        onDeclineAccounts={onDeclineAccounts}
+        detectedAccounts={['1570000000000001', '1570000000000002']}
+        ownAccounts={[]}
+      />,
+    )
+    const prompt = within(container).getByTestId('accounts-prompt')
+    fireEvent.click(within(prompt).getByRole('button', { name: /не мои/i }))
+    expect(onDeclineAccounts).toHaveBeenCalled()
+
+    fireEvent.click(within(prompt).getByLabelText('1570…0001'))
+    fireEvent.click(within(prompt).getByRole('button', { name: /подтвердить счета/i }))
+    expect(onConfirmAccounts).toHaveBeenCalledWith(['1570000000000002'])
   })
 
   it('показывает ноль требующих внимания без упоминания счётов', () => {

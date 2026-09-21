@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectOwnAccounts } from './accounts.js'
+import { detectOwnAccounts, effectiveOwnAccounts } from './accounts.js'
 import { OP } from '../domain/constants.js'
 
 const row = (over) => ({
@@ -44,5 +44,18 @@ describe('detectOwnAccounts', () => {
       row({ opType: OP.CARD, fromAccount: 'B' }),
     ])
     expect(found).toEqual(['A', 'B'])
+  })
+})
+
+describe('effectiveOwnAccounts', () => {
+  const rows = [row({ opType: OP.CARD, fromAccount: 'CARD1', toAccount: 'SHOP' })]
+
+  it('берёт подтверждённый список, если он не пуст', () => {
+    expect(effectiveOwnAccounts(['MINE1', 'MINE2'], rows)).toEqual(['MINE1', 'MINE2'])
+  })
+
+  it('пустой подтверждённый список — не «своих счетов нет», а повод определить их самим', () => {
+    expect(effectiveOwnAccounts([], rows)).toEqual(['CARD1'])
+    expect(effectiveOwnAccounts(null, rows)).toEqual(['CARD1'])
   })
 })
