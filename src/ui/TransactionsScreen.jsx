@@ -40,6 +40,20 @@ export function TransactionsScreen({
 
   return (
     <div>
+      {filters.countableOnly && (
+        <div className="panel" style={{ marginBottom: 8 }}>
+          <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+            Только учитываемые операции
+            <button
+              type="button"
+              onClick={() => setFilters((current) => ({ ...current, countableOnly: undefined }))}
+              style={{ marginLeft: 8, padding: '2px 6px', fontSize: 12 }}
+            >
+              Показать все
+            </button>
+          </p>
+        </div>
+      )}
       <div className="panel" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <input placeholder="Поиск по деталям" onChange={set('query')} />
         <input type="date" onChange={set('from')} />
