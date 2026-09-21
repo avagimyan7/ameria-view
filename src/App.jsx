@@ -29,18 +29,18 @@ export default function App() {
     setTransactions((current) => applyCategories(current, next))
   }
 
-  const handleImport = async (bytes) => {
+  const handleImport = async (bytesOrError) => {
     try {
       setError(null)
       setReport(null)
       setDetectedAccounts([])
 
-      if (bytes instanceof Error) {
-        setError(bytes.message)
+      if (bytesOrError instanceof Error) {
+        setError(bytesOrError.message)
         return
       }
 
-      const result = importWorkbook(bytes, {
+      const result = importWorkbook(bytesOrError, {
         existingTransactions: transactions,
         ownAccounts: settings.ownAccounts,
       })
