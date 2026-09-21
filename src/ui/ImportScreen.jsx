@@ -40,7 +40,14 @@ export function ImportScreen({ onImport, onConfirmAccounts, report, detectedAcco
           type="file"
           accept=".xls,.xlsx"
           style={{ display: 'none' }}
-          onChange={(event) => readFile(event.target.files[0])}
+          onChange={(event) => {
+            readFile(event.target.files[0])
+            // Сбросить value: без этого повторный выбор того же файла
+            // (например, свежей выгрузки за тот же период с тем же именем)
+            // не вызовет change в браузере, и повтор импорта после отказа
+            // молча ничего не сделает.
+            event.target.value = ''
+          }}
         />
       </div>
 

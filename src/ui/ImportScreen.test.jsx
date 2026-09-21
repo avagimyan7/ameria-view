@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ImportScreen } from './ImportScreen.jsx'
 
 describe('ImportScreen', () => {
@@ -119,5 +119,34 @@ describe('ImportScreen', () => {
       // Restore original FileReader
       window.FileReader = OriginalFileReader
     }
+  })
+
+  it('сбрасывает value инпута после выбора файла — иначе повторный выбор того же файла не пришлёт change в браузере', async () => {
+    const onImport = vi.fn()
+    // Этот файл не вызывает cleanup() между тестами (как и соседние тесты
+    // выше), поэтому берём инпут из своего собственного container, а не
+    // из document — иначе можно случайно задеть DOM предыдущего теста.
+    const { container } = render(<ImportScreen onImport={onImport} onConfirmAccounts={() => {}} />)
+    const input = container.querySelector('input[type="file"]')
+    const file = new File(['test'], 'export.xlsx')
+    Object.defineProperty(input, 'files', { value: [file], configurable: true })
+    // Реальный браузер после выбора файла заполняет value ("C:\fakepath\…").
+    // jsdom не воспроизводит эту связку с files автоматически (файлы
+    // подставлены вручную выше), поэтому выставляем value вручную —
+    // это и есть то самое свойство, от которого зависит повторный выбор
+    // того же файла, и единственное, что jsdom позволяет тут проверить.
+    Object.defineProperty(input, 'value', {
+      value: 'C:\\fakepath\\export.xlsx', writable: true, configurable: true,
+    })
+
+    fireEvent.change(input)
+    // Решающая проверка: без сброса value в обработчике эта строка не
+    // пройдёт.
+    expect(input.value).toBe('')
+
+    // Выбираем тот же файл ещё раз — в реальном браузере это сработает
+    // только потому что value уже был сброшен.
+    fireEvent.change(input)
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(2))
   })
 })
