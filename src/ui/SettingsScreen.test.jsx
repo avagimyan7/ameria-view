@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { SettingsScreen } from './SettingsScreen.jsx'
-import { defaultSettings, serializeSettings } from '../store/settings.js'
+import { defaultSettings, serializeSettings, rulesFile, personalFile } from '../store/settings.js'
 
 beforeEach(() => {
   cleanup()
@@ -110,9 +110,15 @@ describe('SettingsScreen', () => {
     )
   })
 
-  it('дополняет импортированный файл без opTypeCategories значениями по умолчанию, чтобы разметка по типу операции не пропадала', async () => {
+  it('импортированный файл без opTypeCategories не теряет разметку по типу операции — она берётся из текущих настроек', async () => {
     const onChange = vi.fn()
-    render(<SettingsScreen settings={defaultSettings()} onChange={onChange} />)
+    // Текущие настройки несут собственную разметку по типу операции — отличную от
+    // значений по умолчанию, чтобы было видно, откуда она взялась после загрузки.
+    const current = {
+      ...defaultSettings(),
+      opTypeCategories: { ...defaultSettings().opTypeCategories, 'Սեփական տիպ': 'other' },
+    }
+    render(<SettingsScreen settings={current} onChange={onChange} />)
     const input = screen.getByTestId('settings-file')
     // Старый экспорт без поля opTypeCategories — так выглядел бы файл,
     // выгруженный до появления этого поля.
@@ -130,8 +136,107 @@ describe('SettingsScreen', () => {
     fireEvent.change(input)
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
     const applied = onChange.mock.calls[0][0]
-    expect(applied.opTypeCategories).toEqual(defaultSettings().opTypeCategories)
+    expect(applied.opTypeCategories).toEqual(current.opTypeCategories)
     expect(Object.keys(applied.opTypeCategories).length).toBeGreaterThan(0)
+  })
+
+  it('выгружает rules.json без счетов и пометок, а personal.json — только их', async () => {
+    const downloads = []
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+      downloads.push(this.download)
+    })
+    try {
+      const settings = {
+        ...defaultSettings(),
+        ownAccounts: ['1570000000000001'],
+        overrides: { 'ключ-строки-выписки': 'cafe' },
+        budgets: { groceries: 300000 },
+      }
+      render(<SettingsScreen settings={settings} onChange={() => {}} />)
+
+      fireEvent.click(screen.getByRole('button', { name: /выгрузить rules\.json/i }))
+      fireEvent.click(screen.getByRole('button', { name: /выгрузить personal\.json/i }))
+
+      expect(downloads).toEqual(['rules.json', 'personal.json'])
+      const [rulesBlob] = URL.createObjectURL.mock.calls[0]
+      const [personalBlob] = URL.createObjectURL.mock.calls[1]
+      const rules = JSON.parse(await rulesBlob.text())
+      const personal = JSON.parse(await personalBlob.text())
+
+      expect(rules).not.toHaveProperty('ownAccounts')
+      expect(rules).not.toHaveProperty('overrides')
+      expect(JSON.stringify(rules)).not.toContain('1570000000000001')
+      expect(JSON.stringify(rules)).not.toContain('ключ-строки-выписки')
+      expect(rules.budgets).toEqual({ groceries: 300000 })
+
+      expect(Object.keys(personal).sort()).toEqual(['overrides', 'ownAccounts', 'version'])
+      expect(personal.ownAccounts).toEqual(['1570000000000001'])
+    } finally {
+      clickSpy.mockRestore()
+    }
+  })
+
+  it('загрузка rules.json не трогает текущие счета и ручные пометки', async () => {
+    const onChange = vi.fn()
+    const current = {
+      ...defaultSettings(),
+      ownAccounts: ['1570000000000001', '1570000000000002'],
+      overrides: { 'ключ-строки-выписки': 'cafe' },
+    }
+    render(<SettingsScreen settings={current} onChange={onChange} />)
+    const incomingRules = rulesFile({
+      ...defaultSettings(),
+      rules: [{ match: 'NEW RULE', category: 'cafe' }],
+      budgets: { cafe: 500000 },
+    })
+    const input = screen.getByTestId('settings-file')
+    const file = new File([serializeSettings(incomingRules)], 'rules.json', { type: 'application/json' })
+    Object.defineProperty(input, 'files', { value: [file] })
+    fireEvent.change(input)
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    const applied = onChange.mock.calls[0][0]
+    expect(applied.ownAccounts).toEqual(['1570000000000001', '1570000000000002'])
+    expect(applied.overrides).toEqual({ 'ключ-строки-выписки': 'cafe' })
+    expect(applied.rules).toEqual([{ match: 'NEW RULE', category: 'cafe' }])
+    expect(applied.budgets).toEqual({ cafe: 500000 })
+  })
+
+  it('загрузка personal.json не трогает текущие правила, категории и бюджеты', async () => {
+    const onChange = vi.fn()
+    const current = {
+      ...defaultSettings(),
+      rules: [{ match: 'MY RULE', category: 'groceries' }],
+      budgets: { groceries: 300000 },
+    }
+    render(<SettingsScreen settings={current} onChange={onChange} />)
+    const incomingPersonal = personalFile({
+      ...defaultSettings(),
+      ownAccounts: ['1570000000000003'],
+      overrides: { 'другой-ключ': 'transport' },
+    })
+    const input = screen.getByTestId('settings-file')
+    const file = new File([serializeSettings(incomingPersonal)], 'personal.json', { type: 'application/json' })
+    Object.defineProperty(input, 'files', { value: [file] })
+    fireEvent.change(input)
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    const applied = onChange.mock.calls[0][0]
+    expect(applied.rules).toEqual([{ match: 'MY RULE', category: 'groceries' }])
+    expect(applied.categories).toEqual(current.categories)
+    expect(applied.budgets).toEqual({ groceries: 300000 })
+    expect(applied.ownAccounts).toEqual(['1570000000000003'])
+    expect(applied.overrides).toEqual({ 'другой-ключ': 'transport' })
+    expect(await screen.findByText(/загружен personal\.json/i)).toBeTruthy()
+  })
+
+  it('объясняет, какой файл можно держать в репозитории, а какой нельзя', () => {
+    render(<SettingsScreen settings={defaultSettings()} onChange={() => {}} />)
+    const panel = screen.getByTestId('settings-files')
+    expect(panel.textContent).toMatch(/rules\.json — [^—]*можно держать\s+в репозитории/)
+    expect(panel.textContent).toMatch(/personal\.json/)
+    expect(panel.textContent).toMatch(/нельзя класть в git/)
+    expect(panel.textContent).not.toMatch(/Держи rules\.json в репозитории/)
   })
 
   it('сбрасывает value инпута после выбора файла — иначе повторный выбор того же файла не пришлёт change в браузере', async () => {

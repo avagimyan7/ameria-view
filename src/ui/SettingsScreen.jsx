@@ -1,9 +1,17 @@
 import { useState } from 'react'
-import { defaultSettings, serializeSettings, parseSettings } from '../store/settings.js'
+import {
+  serializeSettings, parseSettingsFile, rulesFile, personalFile,
+} from '../store/settings.js'
 import { maskAccount } from './format.js'
+
+const LOADED_TEXT = {
+  rules: 'загружен rules.json: категории, правила и бюджеты',
+  personal: 'загружен personal.json: счета и ручные пометки',
+}
 
 export function SettingsScreen({ settings, onChange }) {
   const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null)
 
   const removeAccount = (account) =>
     onChange({ ...settings, ownAccounts: settings.ownAccounts.filter((item) => item !== account) })
@@ -20,12 +28,12 @@ export function SettingsScreen({ settings, onChange }) {
     onChange({ ...settings, rules: settings.rules.filter((_, i) => i !== index) })
 
   // Скачивание через Blob — это работа с локальным файлом, а не сетевой запрос.
-  const exportSettings = () => {
-    const blob = new Blob([serializeSettings(settings)], { type: 'application/json' })
+  const download = (name, content) => {
+    const blob = new Blob([serializeSettings(content)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'rules.json'
+    link.download = name
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -35,16 +43,18 @@ export function SettingsScreen({ settings, onChange }) {
     const reader = new FileReader()
     reader.onload = () => {
       try {
-        const parsed = parseSettings(String(reader.result))
-        // Старые выгрузки могут не содержать полей, добавленных позже
-        // (например opTypeCategories). Накладываем разобранный файл поверх
-        // настроек по умолчанию, чтобы отсутствующее поле не пропадало молча,
-        // а бралось из дефолта, а не приводило к падению разметки.
+        const { kinds, fields } = parseSettingsFile(String(reader.result))
+        // Накладываем только поля загруженного файла на ТЕКУЩИЕ настройки, а не на
+        // значения по умолчанию: иначе загрузка rules.json сбросила бы счета и все
+        // ручные пометки. Поля, которых нет ни в одном файле (opTypeCategories),
+        // текущие настройки несут всегда — они тоже не теряются.
         setError(null)
-        onChange({ ...defaultSettings(), ...parsed })
+        setNotice(kinds.map((kind) => LOADED_TEXT[kind]).join('; '))
+        onChange({ ...settings, ...fields })
       } catch (parseError) {
-        // Ошибка разбора или несовпадение версии: текущие настройки не трогаем,
-        // onChange не вызывается — плохой файл не может заменить хорошие данные.
+        // Ошибка разбора, несовпадение версии или поле неверного вида: текущие
+        // настройки не трогаем — плохой файл не может заменить хорошие данные.
+        setNotice(null)
         setError(parseError.message)
       }
     }
@@ -101,13 +111,30 @@ export function SettingsScreen({ settings, onChange }) {
         </table>
       </div>
 
-      <div className="panel" style={{ marginTop: 12 }}>
-        <h3>Разметка</h3>
+      <div className="panel" style={{ marginTop: 12 }} data-testid="settings-files">
+        <h3>Файлы настроек</h3>
         <p className="muted">
-          Транзакции всегда можно выгрузить из банка заново, а ручную разметку — нет.
-          Держи rules.json в репозитории.
+          Транзакции всегда можно выгрузить из банка заново, а ручную работу — нет.
+          Поэтому она выгружается двумя файлами.
         </p>
-        <button type="button" onClick={exportSettings}>Выгрузить rules.json</button>
+        <p className="muted">
+          rules.json — категории, правила и бюджеты. Личного в нём нет, его можно держать
+          в репозитории: из него же сборка берёт стартовые правила.
+        </p>
+        <p className="muted">
+          personal.json — номера твоих счетов и ручные пометки операций. Ключ пометки — целая
+          строка выписки: контрагент, оба счёта, сумма, дата. Этот файл нельзя класть в git
+          (он в .gitignore) — храни его отдельно.
+        </p>
+        <p className="muted">
+          Загрузить можно любой из двух: приложение само поймёт какой и заменит только его поля.
+        </p>
+        <button type="button" onClick={() => download('rules.json', rulesFile(settings))}>
+          Выгрузить rules.json
+        </button>{' '}
+        <button type="button" onClick={() => download('personal.json', personalFile(settings))}>
+          Выгрузить personal.json
+        </button>
         <input
           data-testid="settings-file"
           type="file"
@@ -122,6 +149,7 @@ export function SettingsScreen({ settings, onChange }) {
           }}
         />
         {error && <p className="expense">{error}</p>}
+        {notice && <p className="muted">{notice[0].toUpperCase() + notice.slice(1)}.</p>}
       </div>
     </div>
   )
