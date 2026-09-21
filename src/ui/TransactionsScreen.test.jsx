@@ -121,6 +121,44 @@ describe('TransactionsScreen', () => {
     expect(onCreateRule).toHaveBeenCalledWith({ match: 'ASK 23 LLC YEREVAN AM', category: 'groceries' })
   })
 
+  it('если все совпадения правила лежат в одной (не AMD) валюте, сумма подписана этой валютой', () => {
+    cleanup()
+    render(
+      <TransactionsScreen
+        transactions={[
+          tx({ currency: 'USD', amount: 2000 }),
+          tx({ key: 'k2', details: 'Ք: ASK 23 LLC YEREVAN AM 190677', currency: 'USD', amount: 3000 }),
+        ]}
+        categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={noop} />,
+    )
+    fireEvent.change(screen.getByTestId('assign-k1'), { target: { value: 'groceries' } })
+    const previewPanel = screen.getByText(/затронет ещё 1/i).closest('.panel')
+    expect(previewPanel.textContent).toContain('30 USD')
+    expect(previewPanel.textContent).not.toContain('֏')
+  })
+
+  it('если совпадения правила лежат в разных валютах, общую сумму не показывает', () => {
+    // Банк не даёт курсов, поэтому сумма совпадений текстового правила в разных
+    // валютах не может быть показана одним числом под одним знаком — это была бы
+    // ровно та тихая ложь (драмы и доллары под ֏), ради которой существует задача.
+    cleanup()
+    render(
+      <TransactionsScreen
+        transactions={[
+          tx(),
+          tx({ key: 'k2', details: 'Ք: ASK 23 LLC YEREVAN AM 190677' }),
+          tx({ key: 'k3', details: 'Ք: ASK 23 LLC YEREVAN AM 887773', currency: 'USD', amount: 5000 }),
+        ]}
+        categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={noop} />,
+    )
+    fireEvent.change(screen.getByTestId('assign-k1'), { target: { value: 'groceries' } })
+    // count = 2: k2 (AMD) и k3 (USD) оба совпадают текстом, k1 исключён как источник.
+    const previewPanel = screen.getByText(/затронет ещё 2/i).closest('.panel')
+    expect(previewPanel.textContent).toMatch(/нескольких валютах/)
+    expect(previewPanel.textContent).not.toContain('֏')
+    expect(previewPanel.textContent).not.toContain('USD')
+  })
+
   it('подписывает сумму операции её собственной валютой, а не всегда драмом', () => {
     cleanup()
     render(

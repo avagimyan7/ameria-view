@@ -1,22 +1,31 @@
 import { useMemo, useState } from 'react'
 import { filterTransactions, NO_CATEGORY } from '../stats/filter.js'
-import { rulePreview } from '../rules/match.js'
+import { rulePreview, ruleMatches } from '../rules/match.js'
 import { suggestRuleText } from '../rules/normalize.js'
-import { formatAmd, formatDate, formatMoney } from './format.js'
+import { formatDate, formatMoney } from './format.js'
 
 export function TransactionsScreen({
   transactions, categories, onAssign, onCreateRule, initialFilters = {}, initialSort = 'date',
+  currency = null,
 }) {
   const [filters, setFilters] = useState(initialFilters)
   const [sort, setSort] = useState(initialSort)
   const [pendingRule, setPendingRule] = useState(null)
 
+  // Пресет «Разобрать» открывается с валютой, активной на момент клика, но эта
+  // валюта не должна застыть: переключение валюты в App должно тут же поменять
+  // очередь. Обычный список операций (initialFilters без currency) валютой
+  // вообще не интересуется — этот флаг решается один раз, при монтировании,
+  // и дальше отличает «это queue» от «это обычный список».
+  const [followsActiveCurrency] = useState(initialFilters.currency !== undefined)
+  const effectiveFilters = followsActiveCurrency ? { ...filters, currency } : filters
+
   const visible = useMemo(() => {
-    const rows = filterTransactions(transactions, filters)
+    const rows = filterTransactions(transactions, effectiveFilters)
     return sort === 'amount'
       ? [...rows].sort((a, b) => b.amount - a.amount)
       : [...rows].sort((a, b) => b.date.localeCompare(a.date))
-  }, [transactions, filters, sort])
+  }, [transactions, effectiveFilters, sort])
   const set = (field) => (event) =>
     setFilters((current) => ({ ...current, [field]: event.target.value || undefined }))
 
@@ -34,9 +43,24 @@ export function TransactionsScreen({
     if (match) setPendingRule({ match, category: categoryId, sourceKey: tx.key })
   }
 
-  const preview = pendingRule
-    ? rulePreview(transactions.filter((t) => t.key !== pendingRule.sourceKey), pendingRule)
-    : null
+  // rulePreview суммирует совпадения текстового правила без оглядки на валюту —
+  // и правильно, у текстового паттерна нет своей валюты. Но показать эту сумму
+  // одним числом с одной подписью можно только когда совпадения сами лежат
+  // в одной валюте; иначе это ровно та тихая ложь, ради которой существует
+  // вся задача (драмы и доллары под одним знаком ֏).
+  const previewCandidates = pendingRule
+    ? transactions.filter((t) => t.key !== pendingRule.sourceKey)
+    : []
+  const preview = pendingRule ? rulePreview(previewCandidates, pendingRule) : null
+  const previewCurrencies = pendingRule
+    ? new Set(previewCandidates.filter((t) => ruleMatches(t, pendingRule)).map((t) => t.currency))
+    : new Set()
+  const previewAmountText =
+    previewCurrencies.size === 1
+      ? ` на ${formatMoney(preview.amount, [...previewCurrencies][0])}`
+      : previewCurrencies.size > 1
+        ? ' в нескольких валютах — общую сумму показать нельзя'
+        : ''
 
   return (
     <div>
@@ -81,8 +105,7 @@ export function TransactionsScreen({
       {pendingRule && preview && (
         <div className="panel" style={{ marginTop: 12 }}>
           <p>
-            Правило «{pendingRule.match}» затронет ещё {preview.count} операций
-            на {formatAmd(preview.amount)}.
+            Правило «{pendingRule.match}» затронет ещё {preview.count} операций{previewAmountText}.
           </p>
           <button type="button" onClick={() => { onCreateRule({ match: pendingRule.match, category: pendingRule.category }); setPendingRule(null) }}>
             Создать правило

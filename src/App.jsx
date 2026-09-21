@@ -27,7 +27,11 @@ export default function App() {
   // По умолчанию берём первую встреченную валюту; переключатель ниже позволяет сменить.
   const currencies = useMemo(() => currenciesOf(transactions), [transactions])
   const [currency, setCurrency] = useState(null)
-  const activeCurrency = currency ?? currencies[0] ?? null
+  // Выбранная валюта могла перестать встречаться в данных (например, после
+  // повторного импорта): держаться за неё дальше нельзя — это тот же дефект,
+  // что «фантомный месяц» в OverviewScreen (Task 18), решается тем же приёмом —
+  // используем выбор, только пока он реально есть среди текущих валют.
+  const activeCurrency = currencies.includes(currency) ? currency : currencies[0] ?? null
 
   useEffect(() => {
     loadTransactions().then((stored) => {
@@ -127,6 +131,7 @@ export default function App() {
           onCreateRule={handleCreateRule}
           initialFilters={transactionsPreset.filters}
           initialSort={transactionsPreset.sort}
+          currency={activeCurrency}
         />
       )}
       {screen === 'categories' && (

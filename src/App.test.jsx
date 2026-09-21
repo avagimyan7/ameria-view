@@ -172,4 +172,96 @@ describe('App currency switcher', () => {
     fireEvent.change(select, { target: { value: 'USD' } })
     expect(screen.getByTestId('total-expense').textContent).toBe(formatMoney(5000, 'USD'))
   })
+
+  it('очередь «Разобрать» следует за переключением валюты, а не застревает на прежней', async () => {
+    await saveTransactions([
+      uncategorizedTx({ key: 'amd-1', currency: 'AMD', amount: 100000, details: 'AMD MERCHANT' }),
+      uncategorizedTx({ key: 'usd-1', currency: 'USD', amount: 5000, details: 'USD MERCHANT' }),
+    ])
+
+    render(<App />)
+    await screen.findByTestId('total-expense')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Категории' }))
+    const disassembleButton = await screen.findByRole('button', { name: /разобрать/i })
+    fireEvent.click(disassembleButton)
+
+    // Очередь открылась в валюте, активной на момент клика (AMD — первая встреченная).
+    expect(screen.getByText('AMD MERCHANT')).toBeTruthy()
+    expect(screen.queryByText('USD MERCHANT')).toBeNull()
+
+    // Переключаем валюту приложения, оставаясь на экране очереди — не заходя в «Разобрать» заново.
+    fireEvent.change(screen.getByLabelText('Валюта'), { target: { value: 'USD' } })
+
+    // Очередь обязана тут же показать неразобранное в USD, а не застрять на AMD.
+    expect(screen.queryByText('AMD MERCHANT')).toBeNull()
+    expect(screen.getByText('USD MERCHANT')).toBeTruthy()
+  })
+})
+
+describe('App currency selection does not outlive its data', () => {
+  beforeEach(async () => {
+    cleanup()
+    await clearTransactions()
+    localStorage.clear()
+  })
+
+  afterEach(async () => {
+    cleanup()
+    await clearTransactions()
+  })
+
+  it('если выбранная валюта пропадает из новых данных, активная валюта откатывается вместо того, чтобы застыть на несуществующей', async () => {
+    const { container } = render(<App />)
+    const importSpy = vi.spyOn(pipelineModule, 'importWorkbook')
+
+    try {
+      importSpy.mockReturnValueOnce({
+        transactions: [
+          uncategorizedTx({ key: 'amd-1', categoryId: 'groceries', currency: 'AMD', amount: 100000 }),
+          uncategorizedTx({ key: 'usd-1', categoryId: 'groceries', currency: 'USD', amount: 5000 }),
+        ],
+        detectedAccounts: [],
+        report: {
+          rows: 2, added: 2, duplicates: 0, unresolved: 0,
+          periodFrom: '2026-09-01', periodTo: '2026-09-20',
+        },
+      })
+
+      const fileInput = container.querySelector('input[type="file"]')
+      fireEvent.change(fileInput, { target: { files: [new File([new Uint8Array([1, 2, 3])], 'a.xlsx')] } })
+      // Оба отчёта об импорте говорят «Импорт завершён» — ждать нужно чего-то,
+      // что различает первый отчёт от второго, иначе waitFor может решить, что
+      // готово, по ещё не сброшенному прежнему отчёту.
+      await waitFor(() => expect(screen.getByText('Строк в файле: 2')).toBeTruthy())
+
+      fireEvent.change(screen.getByLabelText('Валюта'), { target: { value: 'USD' } })
+      expect(screen.getByLabelText('Валюта').value).toBe('USD')
+
+      // Следующий импорт приносит уже только AMD — валюта, на которую переключились, исчезла.
+      importSpy.mockReturnValueOnce({
+        transactions: [
+          uncategorizedTx({ key: 'amd-2', categoryId: 'groceries', currency: 'AMD', amount: 200000 }),
+        ],
+        detectedAccounts: [],
+        report: {
+          rows: 1, added: 1, duplicates: 0, unresolved: 0,
+          periodFrom: '2026-09-01', periodTo: '2026-09-20',
+        },
+      })
+      fireEvent.change(fileInput, { target: { files: [new File([new Uint8Array([4, 5, 6])], 'b.xlsx')] } })
+      await waitFor(() => expect(screen.getByText('Строк в файле: 1')).toBeTruthy())
+
+      // Единственная оставшаяся валюта — AMD, переключатель обязан пропасть, а не
+      // продолжать показывать выбор несуществующего USD.
+      expect(screen.queryByLabelText('Валюта')).toBeNull()
+
+      // И статистика обязана считаться в AMD, а не молчать нулями из-за того, что
+      // внутри всё ещё «выбран USD» (в духе фантомного месяца из Task 18).
+      fireEvent.click(screen.getByRole('button', { name: 'Обзор' }))
+      expect(screen.getByTestId('total-expense').textContent).toBe(formatMoney(200000, 'AMD'))
+    } finally {
+      importSpy.mockRestore()
+    }
+  })
 })
