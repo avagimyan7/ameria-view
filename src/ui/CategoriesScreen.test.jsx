@@ -136,6 +136,16 @@ describe('CategoriesScreen', () => {
         ]} />,
     )
     const summary = screen.getByTestId('uncategorized-summary').textContent
-    expect(summary).toMatch(/1 операций/)
+    expect(summary).toMatch(/(^|\D)1 операция на/)
+  })
+
+  it('согласует число операций в очереди: 2 операции, 5 операций', () => {
+    const uncategorizedExpense = (n) =>
+      Array.from({ length: n }, () => tx({ categoryId: null, amount: 100000 }))
+    const { unmount } = render(<CategoriesScreen {...props} transactions={uncategorizedExpense(2)} />)
+    expect(screen.getByTestId('uncategorized-summary').textContent).toMatch(/(^|\D)2 операции на/)
+    unmount()
+    render(<CategoriesScreen {...props} transactions={uncategorizedExpense(5)} />)
+    expect(screen.getByTestId('uncategorized-summary').textContent).toMatch(/(^|\D)5 операций на/)
   })
 })
