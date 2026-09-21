@@ -41,3 +41,20 @@ export function pluralRu(count, [one, few, many]) {
   if (last >= 2 && last <= 4) return few
   return many
 }
+
+// Сумма со знаком, как в макете: настоящий минус «−» (U+2212), а не дефис,
+// и «+» у поступлений. sign: 'minus' | 'plus' | null — знак задаёт смысл
+// операции (направление), а не знак числа: суммы в выписке всегда положительные.
+export function formatSigned(luma, currency, sign) {
+  const text = formatMoney(Math.abs(luma), currency)
+  if (sign === 'minus') return `−${text}`
+  if (sign === 'plus') return `+${text}`
+  return text
+}
+
+// «18.09» — день и месяц без года, для списков внутри одного периода.
+export function formatDayMonth(iso) {
+  if (!iso) return ''
+  const [, month, day] = iso.split('-')
+  return `${day}.${month}`
+}

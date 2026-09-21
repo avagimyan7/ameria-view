@@ -57,7 +57,7 @@ describe('OverviewScreen', () => {
     expect(screen.getByRole('heading', { level: 2 }).textContent).toMatch(/сентябрь/)
 
     // Click the month bar to select it
-    fireEvent.click(screen.getByText('сен'))
+    fireEvent.click(screen.getByRole('button', { name: 'сентябрь 2026' }))
 
     // Verify it's selected (should still show сентябрь)
     expect(screen.getByRole('heading', { level: 2 }).textContent).toMatch(/сентябрь/)

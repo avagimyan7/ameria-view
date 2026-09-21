@@ -31,7 +31,8 @@ function addAccounts(current, confirmed) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('import')
+  // Всегда с обзора: без данных он сам покажет пустое состояние и позовёт в импорт.
+  const [screen, setScreen] = useState('overview')
   const [settings, setSettings] = useState(() => loadSettings())
   // Эффект первой загрузки читает настройки в момент, когда хранилище ответило,
   // а не те, что были при первом рендере: человек успевает их поменять.
@@ -64,8 +65,6 @@ export default function App() {
       .then((stored) => {
         if (cancelled) return
         setTransactions(derive(stored, settingsRef.current))
-        // На обзор — только если человек за время загрузки не ушёл с экрана импорта сам.
-        if (stored.length > 0) setScreen((current) => (current === 'import' ? 'overview' : current))
         setLoaded(true)
       })
       .catch((failure) => {
@@ -132,22 +131,21 @@ export default function App() {
   return (
     <Layout screen={screen} onNavigate={handleNavigate}>
       {loadError && (
-        <p className="expense" role="alert">{loadError}</p>
+        <p className="error" role="alert" style={{ marginBottom: 14 }}>{loadError}</p>
       )}
       {currencies.length > 1 && (
-        <div className="panel" style={{ marginBottom: 12 }}>
-          <label>
-            Валюта:{' '}
-            <select
-              aria-label="Валюта"
-              value={activeCurrency ?? ''}
-              onChange={(event) => setCurrency(event.target.value)}
-            >
-              {currencies.map((code) => (
-                <option key={code} value={code}>{code}</option>
-              ))}
-            </select>
-          </label>
+        <div className="currency-bar">
+          <span className="soft">Валюта</span>
+          <select
+            className="chip"
+            aria-label="Валюта"
+            value={activeCurrency ?? ''}
+            onChange={(event) => setCurrency(event.target.value)}
+          >
+            {currencies.map((code) => (
+              <option key={code} value={code}>{code}</option>
+            ))}
+          </select>
         </div>
       )}
       {screen === 'import' && (
@@ -170,6 +168,8 @@ export default function App() {
           transactions={transactions}
           categories={settings.categories}
           currency={activeCurrency}
+          loaded={loaded}
+          onNavigate={handleNavigate}
         />
       )}
       {screen === 'transactions' && (

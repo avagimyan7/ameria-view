@@ -11,6 +11,12 @@ import { buildWorkbook } from '../test/fixtures/buildWorkbook.js'
 import { HEADERS, OP } from './domain/constants.js'
 import { defaultSettings, saveSettings, loadSettings } from './store/settings.js'
 
+// Приложение открывается на обзоре; выгрузку загружают на вкладке «Импорт».
+function openImport(container) {
+  fireEvent.click(screen.getByRole('button', { name: 'Импорт' }))
+  return container.querySelector('input[type="file"]')
+}
+
 describe('App import flow', () => {
   beforeEach(async () => {
     await clearTransactions()
@@ -42,7 +48,7 @@ describe('App import flow', () => {
         }
       })
 
-      const fileInput = container.querySelector('input[type="file"]')
+      const fileInput = openImport(container)
       // Импорт открывается только после первой загрузки хранилища.
       await waitFor(() => expect(fileInput.disabled).toBe(false))
       const file1 = new File([new Uint8Array([1, 2, 3])], 'test1.xlsx')
@@ -132,7 +138,7 @@ describe('App transactions preset reset on navigation', () => {
 
     // Обычная навигация прочь с экрана транзакций и обратно должна сбросить пресет.
     fireEvent.click(screen.getByRole('button', { name: 'Обзор' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Транзакции' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Операции' }))
 
     expect(findCategoryFilterSelect().value).toBe('')
     expect(screen.queryByText(/Только учитываемые операции/)).toBeNull()
@@ -233,7 +239,7 @@ describe('App currency selection does not outlive its data', () => {
         },
       })
 
-      const fileInput = container.querySelector('input[type="file"]')
+      const fileInput = openImport(container)
       // Импорт открывается только после первой загрузки хранилища.
       await waitFor(() => expect(fileInput.disabled).toBe(false))
       fireEvent.change(fileInput, { target: { files: [new File([new Uint8Array([1, 2, 3])], 'a.xlsx')] } })
@@ -304,7 +310,7 @@ describe('App: направление производно от текущего
 
     try {
       const { container } = render(<App />)
-      const fileInput = container.querySelector('input[type="file"]')
+      const fileInput = openImport(container)
       await waitFor(() => expect(fileInput.disabled).toBe(false))
 
       const bytes = buildWorkbook([
@@ -336,7 +342,7 @@ describe('App: направление производно от текущего
       expect(screen.getByTestId('total-expense').textContent).toBe(formatMoney(100000, 'AMD'))
       expect(importSpy).toHaveBeenCalledTimes(1)
 
-      fireEvent.click(screen.getByRole('button', { name: 'Транзакции' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Операции' }))
       fireEvent.change(
         screen.getAllByRole('combobox').find((select) =>
           Array.from(select.options).some((option) => option.value === 'internal')),
@@ -366,7 +372,7 @@ describe('App: направление производно от текущего
   it('отказ от предложенного счёта оставляет список своих счетов как был', async () => {
     saveSettings({ ...defaultSettings(), ownAccounts: [A] })
     const { container } = render(<App />)
-    const fileInput = container.querySelector('input[type="file"]')
+    const fileInput = openImport(container)
     await waitFor(() => expect(fileInput.disabled).toBe(false))
 
     const bytes = buildWorkbook([
@@ -433,7 +439,7 @@ describe('App: первая загрузка из хранилища не гон
     loadSpy = vi.spyOn(dbModule, 'loadTransactions').mockImplementation(() => load.promise)
 
     const { container } = render(<App />)
-    const fileInput = container.querySelector('input[type="file"]')
+    const fileInput = openImport(container)
     expect(fileInput.disabled).toBe(true)
     expect(screen.getByText(/Загружаю сохранённые операции/)).toBeTruthy()
 
@@ -457,7 +463,7 @@ describe('App: первая загрузка из хранилища не гон
       load.resolve([uncategorizedTx({ key: 'zz-1', details: 'ZZ MERCHANT' })])
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Транзакции' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Операции' }))
     // Категория посчитана по текущим настройкам (правила нет), а не по стартовым.
     expect(screen.getByTestId('assign-zz-1').value).toBe('')
   })
@@ -470,7 +476,7 @@ describe('App: первая загрузка из хранилища не гон
 
     expect(await screen.findByText(/Не удалось прочитать сохранённые операции/)).toBeTruthy()
     expect(screen.getByText(/IndexedDB недоступна/)).toBeTruthy()
-    expect(container.querySelector('input[type="file"]').disabled).toBe(true)
+    expect(openImport(container).disabled).toBe(true)
   })
 })
 
@@ -497,7 +503,8 @@ describe('App: «сегодня» — по местному времени, а �
 
   it('без операций экран категорий показывает текущий месяц по местному времени', async () => {
     const { container } = render(<App />)
-    await waitFor(() => expect(container.querySelector('input[type="file"]').disabled).toBe(false))
+    // Дождаться конца первой загрузки: пустое хранилище — пустой обзор.
+    await screen.findByText('Пока нет данных')
     fireEvent.click(screen.getByRole('button', { name: 'Категории' }))
     expect(screen.getByTestId('categories-heading').textContent).toMatch(/сентябрь 2026/)
   })
