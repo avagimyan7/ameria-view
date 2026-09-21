@@ -294,7 +294,7 @@ button.chip { background-image: none; padding-right: 14px; }
 .summary-net-head { display: flex; align-items: center; justify-content: space-between; }
 .summary-net-head .caps { color: var(--text-soft); font-weight: 600; }
 .summary-net-head .badge { font-size: 11px; }
-.summary-net-value { font-size: 36px; font-weight: 700; letter-spacing: -.02em; margin-top: 6px; line-height: 1.15; }
+.summary-net-value { font-size: clamp(26px, 9vw, 36px); font-weight: 700; letter-spacing: -.02em; margin-top: 6px; line-height: 1.15; }
 .split-bar { display: flex; height: 6px; border-radius: var(--r-pill); overflow: hidden; background: var(--bg); margin-top: 16px; }
 .summary-tile { border-radius: var(--r-md); padding: 12px; min-width: 0; }
 .summary-tile.is-income { background: rgba(63, 208, 138, .08); border: 1px solid rgba(63, 208, 138, .18); }
