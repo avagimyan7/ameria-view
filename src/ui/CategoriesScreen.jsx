@@ -18,6 +18,15 @@ export function CategoriesScreen({
   const progress = budgetProgress(transactions, budgets, month, today)
   const nameOf = (id) => categories.find((c) => c.id === id)?.name ?? id
 
+  // Create a map of actual spending by category for the month
+  const spentByCategory = useMemo(() => {
+    const map = new Map()
+    for (const row of rows) {
+      map.set(row.categoryId, row.amount)
+    }
+    return map
+  }, [rows])
+
   return (
     <div>
       <div className="panel">
@@ -52,6 +61,15 @@ export function CategoriesScreen({
             {categories.map((category) => {
               const row = progress.find((item) => item.categoryId === category.id)
               const limit = budgets[category.id] ?? 0
+              const spent = spentByCategory.get(category.id) ?? 0
+              const projectedTotal = row?.projectedTotal ?? 0
+              const overrunDay = row?.overrunDay ?? null
+
+              // Show "превышен" if limit is exceeded, otherwise show forecast day
+              const overrunText = limit > 0 && spent > limit
+                ? 'превышен'
+                : overrunDay ? `с ${overrunDay}-го числа` : ''
+
               return (
                 <tr key={category.id}>
                   <td>{nameOf(category.id)}</td>
@@ -61,19 +79,21 @@ export function CategoriesScreen({
                       type="number"
                       value={Math.round(limit / 100)}
                       style={{ width: 90 }}
-                      onChange={(event) =>
-                        onChangeBudget(category.id, Math.round(Number(event.target.value) * 100))
-                      }
+                      min="0"
+                      onChange={(event) => {
+                        const value = Math.max(0, Number(event.target.value))
+                        onChangeBudget(category.id, Math.round(value * 100))
+                      }}
                     />
                   </td>
                   <td className="num" data-testid={`budget-${category.id}-spent`}>
-                    {formatAmd(row?.spent ?? 0)}
+                    {formatAmd(spent)}
                   </td>
                   <td className="num" data-testid={`budget-${category.id}-projected`}>
-                    {formatAmd(row?.projectedTotal ?? 0)}
+                    {limit > 0 ? formatAmd(projectedTotal) : ''}
                   </td>
                   <td className="expense" data-testid={`budget-${category.id}-overrun`}>
-                    {row?.overrunDay ? `с ${row.overrunDay}-го числа` : ''}
+                    {overrunText}
                   </td>
                 </tr>
               )

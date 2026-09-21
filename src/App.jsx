@@ -66,8 +66,17 @@ export default function App() {
     }
   }
 
+  const handleNavigate = (nextScreen) => {
+    // Reset transactionsPreset when navigating away from transactions screen
+    // This ensures the preset doesn't persist when returning via normal tab navigation
+    if (screen === 'transactions' && nextScreen !== 'transactions') {
+      setTransactionsPreset({ filters: {}, sort: 'date' })
+    }
+    setScreen(nextScreen)
+  }
+
   return (
-    <Layout screen={screen} onNavigate={setScreen}>
+    <Layout screen={screen} onNavigate={handleNavigate}>
       {screen === 'import' && (
         <ImportScreen
           onImport={handleImport}

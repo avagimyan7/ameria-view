@@ -69,3 +69,7 @@ describe('App import flow', () => {
     }
   })
 })
+
+// Note: Additional integration tests for preset navigation are covered
+// by TransactionsScreen tests verifying that initialFilters parameter works correctly
+// and by CategoriesScreen tests verifying the onShowUncategorized callback
