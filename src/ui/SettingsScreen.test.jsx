@@ -133,4 +133,30 @@ describe('SettingsScreen', () => {
     expect(applied.opTypeCategories).toEqual(defaultSettings().opTypeCategories)
     expect(Object.keys(applied.opTypeCategories).length).toBeGreaterThan(0)
   })
+
+  it('сбрасывает value инпута после выбора файла — иначе повторный выбор того же файла не пришлёт change в браузере', async () => {
+    const onChange = vi.fn()
+    render(<SettingsScreen settings={defaultSettings()} onChange={onChange} />)
+    const input = screen.getByTestId('settings-file')
+    const file = new File([serializeSettings(defaultSettings())], 'rules.json', { type: 'application/json' })
+    Object.defineProperty(input, 'files', { value: [file], configurable: true })
+    // Реальный браузер после выбора файла заполняет value ("C:\fakepath\…").
+    // jsdom не воспроизводит эту связку с files автоматически (файлы
+    // подставлены вручную выше), поэтому выставляем value вручную — это и
+    // есть то самое свойство, от которого зависит повторный выбор того же
+    // файла, и единственное, что jsdom позволяет тут проверить.
+    Object.defineProperty(input, 'value', {
+      value: 'C:\\fakepath\\rules.json', writable: true, configurable: true,
+    })
+
+    fireEvent.change(input)
+    // Решающая проверка: без сброса value в обработчике эта строка не
+    // пройдёт.
+    expect(input.value).toBe('')
+
+    // Выбираем тот же файл ещё раз — в реальном браузере это сработает
+    // только потому что value уже был сброшен.
+    fireEvent.change(input)
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalledTimes(2))
+  })
 })

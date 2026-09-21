@@ -112,7 +112,14 @@ export function SettingsScreen({ settings, onChange }) {
           data-testid="settings-file"
           type="file"
           accept="application/json,.json"
-          onChange={(event) => importSettings(event.target.files[0])}
+          onChange={(event) => {
+            importSettings(event.target.files[0])
+            // Сбросить value: без этого повторный выбор того же файла
+            // (например, после исправления и пересохранения того же rules.json)
+            // не вызовет change в браузере, и повторная попытка молча ничего
+            // не сделает.
+            event.target.value = ''
+          }}
         />
         {error && <p className="expense">{error}</p>}
       </div>
