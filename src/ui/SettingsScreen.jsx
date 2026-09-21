@@ -90,7 +90,7 @@ export function SettingsScreen({ settings, onChange }) {
       <div className="panel" style={{ marginTop: 12 }}>
         <h3>Правила категорий</h3>
         <p className="muted">Срабатывает первое подходящее правило сверху.</p>
-        <table>
+        <table className="rules-table">
           <tbody>
             {settings.rules.map((rule, index) => (
               <tr key={`${rule.match}-${index}`}>

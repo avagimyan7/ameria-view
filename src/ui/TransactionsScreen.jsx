@@ -133,7 +133,7 @@ export function TransactionsScreen({
       )}
 
       <div className="panel" style={{ marginTop: 12 }}>
-        <table>
+        <table className="tx-table">
           <thead>
             <tr>
               <th>Дата</th>
@@ -145,12 +145,12 @@ export function TransactionsScreen({
           <tbody>
             {visible.map((tx) => (
               <tr key={tx.key}>
-                <td className="muted">{formatDate(tx.date)}</td>
-                <td>
+                <td className="tx-date muted">{formatDate(tx.date)}</td>
+                <td className="tx-details">
                   {tx.details || tx.counterparty}
-                  <div className="muted" style={{ fontSize: 12 }}>{tx.opType}</div>
+                  <div className="tx-optype muted">{tx.opType}</div>
                 </td>
-                <td>
+                <td className="tx-category">
                   <select
                     data-testid={`assign-${tx.key}`}
                     value={tx.categoryId ?? ''}
@@ -162,7 +162,7 @@ export function TransactionsScreen({
                     ))}
                   </select>
                 </td>
-                <td className={`num ${tx.direction === 'income' ? 'income' : tx.direction === 'expense' ? 'expense' : 'muted'}`}>
+                <td className={`tx-amount num ${tx.direction === 'income' ? 'income' : tx.direction === 'expense' ? 'expense' : 'muted'}`}>
                   {formatMoney(tx.amount, tx.currency)}
                 </td>
               </tr>

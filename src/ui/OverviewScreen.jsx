@@ -35,22 +35,22 @@ export function OverviewScreen({ transactions, categories, currency = null }) {
 
       <h2>{activeMonth ? formatMonth(activeMonth) : ''}</h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div className="totals">
         <div className="panel">
           <div className="muted">Пришло</div>
-          <div className="income" data-testid="total-income" style={{ fontSize: 24 }}>
+          <div className="income amount" data-testid="total-income">
             {formatMoney(monthTotals.income, currency)}
           </div>
         </div>
         <div className="panel">
           <div className="muted">Ушло</div>
-          <div className="expense" data-testid="total-expense" style={{ fontSize: 24 }}>
+          <div className="expense amount" data-testid="total-expense">
             {formatMoney(monthTotals.expense, currency)}
           </div>
         </div>
         <div className="panel">
           <div className="muted">Осталось</div>
-          <div data-testid="total-net" style={{ fontSize: 24 }}>
+          <div className="amount" data-testid="total-net">
             {formatMoney(monthTotals.net, currency)}
           </div>
         </div>

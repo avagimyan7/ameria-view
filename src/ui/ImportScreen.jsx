@@ -84,7 +84,7 @@ export function ImportScreen({
         onClick={() => { if (!disabled) document.getElementById('file-input').click() }}
         aria-disabled={disabled}
       >
-        <p>{disabled ? 'Загружаю сохранённые операции…' : 'Перетащи сюда выгрузку из myAmeria'}</p>
+        <p>{disabled ? 'Загружаю сохранённые операции…' : 'Перетащи сюда выгрузку из myAmeria или нажми, чтобы выбрать файл'}</p>
         <p className="muted">
           myameria.am/history → кнопка Filter справа → выставь даты → секция Actions → кнопка Excel
         </p>

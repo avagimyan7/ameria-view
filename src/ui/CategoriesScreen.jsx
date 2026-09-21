@@ -52,7 +52,7 @@ export function CategoriesScreen({
 
       <div className="panel" style={{ marginTop: 12 }}>
         <h3>Бюджеты</h3>
-        <table>
+        <table className="budget-table">
           <thead>
             <tr>
               <th>Категория</th>
@@ -78,7 +78,7 @@ export function CategoriesScreen({
               return (
                 <tr key={category.id}>
                   <td>{nameOf(category.id)}</td>
-                  <td className="num">
+                  <td className="num" data-label="Лимит, ֏">
                     <input
                       data-testid={`budget-${category.id}-limit`}
                       type="number"
@@ -91,13 +91,13 @@ export function CategoriesScreen({
                       }}
                     />
                   </td>
-                  <td className="num" data-testid={`budget-${category.id}-spent`}>
+                  <td className="num" data-label="Потрачено" data-testid={`budget-${category.id}-spent`}>
                     {formatMoney(spent, currency)}
                   </td>
-                  <td className="num" data-testid={`budget-${category.id}-projected`}>
+                  <td className="num" data-label="Прогноз" data-testid={`budget-${category.id}-projected`}>
                     {limit > 0 ? formatMoney(projectedTotal, currency) : ''}
                   </td>
-                  <td className="expense" data-testid={`budget-${category.id}-overrun`}>
+                  <td className="expense" data-label="Перерасход" data-testid={`budget-${category.id}-overrun`}>
                     {overrunText}
                   </td>
                 </tr>

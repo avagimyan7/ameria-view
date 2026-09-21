@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Без скругления и с запасом по краям: лаунчер сам обрежет иконку по своей маске,
+       а всё значимое лежит в центральных 80% (безопасная зона maskable). -->
+  <rect width="512" height="512" fill="#12141a"/>
+  <rect x="146" y="250" width="60" height="130" rx="8" fill="#2f9e44"/>
+  <rect x="226" y="168" width="60" height="212" rx="8" fill="#e03131"/>
+  <rect x="306" y="218" width="60" height="162" rx="8" fill="#4c6ef5"/>
+  <rect x="130" y="380" width="252" height="12" rx="6" fill="#8d95a8"/>
+</svg>
