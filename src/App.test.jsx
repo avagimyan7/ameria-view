@@ -1,9 +1,10 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import * as pipelineModule from './import/pipeline.js'
 import App from './App.jsx'
-import { clearTransactions } from './store/db.js'
+import { clearTransactions, saveTransactions } from './store/db.js'
+import { NO_CATEGORY } from './stats/filter.js'
 
 describe('App import flow', () => {
   beforeEach(async () => {
@@ -70,9 +71,64 @@ describe('App import flow', () => {
   })
 })
 
-// Note: Preset reset behavior is tested via:
-// 1. CategoriesScreen.test.jsx: onShowUncategorized callback receives { countableOnly: true }
-// 2. TransactionsScreen.test.jsx: controlled select with initialFilters renders with correct value
-// 3. Filter.test.js: countableOnly option excludes non-countable operations
-// 4. Manual verification in browser shows preset resets when navigating through tabs
-// The handleNavigate() handler in App.jsx resets the preset when leaving transactions screen
+const uncategorizedTx = (over) => ({
+  key: Math.random().toString(36), date: '2026-09-10', opType: 'Քարտային գործարք',
+  fromAccount: 'MINE', toAccount: 'SHOP', counterparty: '', details: '', comment: '',
+  status: 'Հաստատված', amount: 100000, currency: 'AMD', direction: 'expense',
+  categoryId: null, ...over,
+})
+
+// Единственная деталь фильтра транзакций, у которой есть и «Все категории», и «Без категории» —
+// это фильтр категорий на панели, а не select назначения категории в строке таблицы
+// (у него нет опции «Все категории»). Это отличает их надёжно.
+function findCategoryFilterSelect() {
+  return screen
+    .getAllByRole('combobox')
+    .find((select) => Array.from(select.options).some((opt) => opt.textContent === 'Все категории'))
+}
+
+describe('App transactions preset reset on navigation', () => {
+  beforeEach(async () => {
+    // Предыдущий тестовый файл-сосед (describe выше) не вызывает cleanup(),
+    // поэтому явно очищаем DOM перед собственным рендером — иначе на странице
+    // остаются две панели навигации и getByRole находит несколько кнопок.
+    cleanup()
+    await clearTransactions()
+    localStorage.clear()
+  })
+
+  afterEach(async () => {
+    cleanup()
+    await clearTransactions()
+  })
+
+  it('применяет пресет «Разобрать», но сбрасывает его при обычной навигации через вкладки', async () => {
+    // Одна неразобранная, учитываемая операция — чтобы на экране категорий появилась очередь.
+    await saveTransactions([uncategorizedTx({ key: 'uncat-1' })])
+
+    render(<App />)
+
+    // App грузит транзакции из IndexedDB асинхронно и сам переключает экран на «Обзор»,
+    // когда данные приходят (см. useEffect в App.jsx). Если кликнуть «Категории» до того,
+    // как это доигралось, этот же эффект молча откатит нас обратно на «Обзор». Поэтому
+    // сперва дожидаемся, что данные точно загружены, и только потом идём в «Категории».
+    await screen.findByTestId('loan-total')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Категории' }))
+
+    const disassembleButton = await screen.findByRole('button', { name: /разобрать/i })
+    fireEvent.click(disassembleButton)
+
+    // Пресет «Разобрать» применён: фильтр категории стоит на «Без категории»,
+    // индикатор «Только учитываемые операции» виден.
+    expect(findCategoryFilterSelect().value).toBe(NO_CATEGORY)
+    expect(screen.getByText(/Только учитываемые операции/)).toBeTruthy()
+
+    // Обычная навигация прочь с экрана транзакций и обратно должна сбросить пресет.
+    fireEvent.click(screen.getByRole('button', { name: 'Обзор' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Транзакции' }))
+
+    expect(findCategoryFilterSelect().value).toBe('')
+    expect(screen.queryByText(/Только учитываемые операции/)).toBeNull()
+  })
+})

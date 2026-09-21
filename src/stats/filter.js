@@ -1,12 +1,6 @@
-import { STATUS_APPROVED } from '../domain/constants.js'
+import { isCountable } from './aggregate.js'
 
 export const NO_CATEGORY = '__none__'
-
-const COUNTABLE_DIRECTIONS = new Set(['expense', 'income'])
-
-function isCountable(tx) {
-  return tx.status === STATUS_APPROVED && COUNTABLE_DIRECTIONS.has(tx.direction)
-}
 
 export function filterTransactions(transactions, filters = {}) {
   const query = filters.query ? String(filters.query).toUpperCase() : null

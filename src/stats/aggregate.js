@@ -4,13 +4,18 @@ import { normalizeMerchant } from '../rules/normalize.js'
 
 const COUNTABLE_DIRECTIONS = new Set(['expense', 'income'])
 
+// Единственное определение «учитываемой» операции: подтверждён и это доход/расход.
+// filter.js импортирует этот же предикат для countableOnly — так правило не может
+// незаметно разойтись между экраном очереди разбора и фильтром списка операций.
+export function isCountable(tx) {
+  return tx.status === STATUS_APPROVED && COUNTABLE_DIRECTIONS.has(tx.direction)
+}
+
 // В статистику идут только подтверждённые доходы и расходы.
 // Внутренние переводы и операции без опознанных счетов исключены сознательно:
 // иначе перекладывание денег между своими счетами раздувает и доход, и расход.
 export function countable(transactions) {
-  return transactions.filter(
-    (tx) => tx.status === STATUS_APPROVED && COUNTABLE_DIRECTIONS.has(tx.direction),
-  )
+  return transactions.filter(isCountable)
 }
 
 export function totals(transactions) {
