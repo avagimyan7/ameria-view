@@ -4,6 +4,13 @@ import { rulePreview, ruleMatches } from '../rules/match.js'
 import { suggestRuleText } from '../rules/normalize.js'
 import { formatDate, formatMoney } from './format.js'
 
+const DIRECTION_LABELS = {
+  expense: 'расходы',
+  income: 'доходы',
+  internal: 'переводы между своими счетами',
+  unresolved: 'требующие внимания',
+}
+
 export function TransactionsScreen({
   transactions, categories, onAssign, onCreateRule, initialFilters = {}, initialSort = 'date',
   currency = null,
@@ -40,7 +47,13 @@ export function TransactionsScreen({
       return
     }
     const match = suggestRuleText(tx)
-    if (match) setPendingRule({ match, category: categoryId, sourceKey: tx.key })
+    if (!match) return
+    // Правило сужено направлением исходной операции (спека §6.5): иначе правило,
+    // предложенное на входящем личном переводе, поймает и все исходящие —
+    // а вставая первым, перебьёт для них любые прежние правила.
+    // sourceKey — служебное поле превью, в сохранённое правило оно не идёт.
+    const rule = { match, category: categoryId, ...(tx.direction ? { direction: tx.direction } : {}) }
+    setPendingRule({ rule, sourceKey: tx.key })
   }
 
   // rulePreview суммирует совпадения текстового правила без оглядки на валюту —
@@ -48,12 +61,14 @@ export function TransactionsScreen({
   // одним числом с одной подписью можно только когда совпадения сами лежат
   // в одной валюте; иначе это ровно та тихая ложь, ради которой существует
   // вся задача (драмы и доллары под одним знаком ֏).
+  // Превью считает ровно то правило, которое будет создано, — с тем же сужением.
+  const rule = pendingRule?.rule ?? null
   const previewCandidates = pendingRule
     ? transactions.filter((t) => t.key !== pendingRule.sourceKey)
     : []
-  const preview = pendingRule ? rulePreview(previewCandidates, pendingRule) : null
-  const previewCurrencies = pendingRule
-    ? new Set(previewCandidates.filter((t) => ruleMatches(t, pendingRule)).map((t) => t.currency))
+  const preview = rule ? rulePreview(previewCandidates, rule) : null
+  const previewCurrencies = rule
+    ? new Set(previewCandidates.filter((t) => ruleMatches(t, rule)).map((t) => t.currency))
     : new Set()
   const previewAmountText =
     previewCurrencies.size === 1
@@ -102,12 +117,14 @@ export function TransactionsScreen({
         </select>
       </div>
 
-      {pendingRule && preview && (
+      {rule && preview && (
         <div className="panel" style={{ marginTop: 12 }}>
           <p>
-            Правило «{pendingRule.match}» затронет ещё {preview.count} операций{previewAmountText}.
+            Правило «{rule.match}»
+            {rule.direction ? ` (только ${DIRECTION_LABELS[rule.direction] ?? rule.direction})` : ''}
+            {' '}затронет ещё {preview.count} операций{previewAmountText}.
           </p>
-          <button type="button" onClick={() => { onCreateRule({ match: pendingRule.match, category: pendingRule.category }); setPendingRule(null) }}>
+          <button type="button" onClick={() => { onCreateRule(rule); setPendingRule(null) }}>
             Создать правило
           </button>
           <button type="button" onClick={() => setPendingRule(null)}>Не надо</button>

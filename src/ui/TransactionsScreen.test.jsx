@@ -118,7 +118,42 @@ describe('TransactionsScreen', () => {
     const previewPanel = screen.getByText(/затронет ещё 2/i).closest('.panel')
     expect(/2\s000\s֏/.test(previewPanel.textContent)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /создать правило/i }))
-    expect(onCreateRule).toHaveBeenCalledWith({ match: 'ASK 23 LLC YEREVAN AM', category: 'groceries' })
+    expect(onCreateRule).toHaveBeenCalledWith({
+      match: 'ASK 23 LLC YEREVAN AM', category: 'groceries', direction: 'expense',
+    })
+  })
+
+  it('правило из интерфейса сужено направлением исходной операции — входящий перевод не ловит исходящие', () => {
+    // Пример из спеки §6.5: «Անձնական փոխանցում» входящий и исходящий — разные по смыслу вещи.
+    cleanup()
+    const onCreateRule = vi.fn()
+    const transfer = (over) => tx({
+      opType: 'Փոխանցում քարտին', counterparty: '', details: 'Անձնական փոխանցում', ...over,
+    })
+    render(
+      <TransactionsScreen
+        transactions={[
+          transfer({ key: 'in1', direction: 'income', amount: 100000 }),
+          transfer({ key: 'in2', direction: 'income', amount: 200000 }),
+          transfer({ key: 'out1', direction: 'expense', amount: 500000 }),
+          transfer({ key: 'out2', direction: 'expense', amount: 700000 }),
+        ]}
+        categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={onCreateRule} />,
+    )
+    fireEvent.change(screen.getByTestId('assign-in1'), { target: { value: 'salary' } })
+
+    // Превью описывает именно то правило, которое будет создано: только входящие.
+    const previewPanel = screen.getByText(/затронет ещё/i).closest('.panel')
+    expect(previewPanel.textContent).toMatch(/затронет ещё 1 /)
+    expect(previewPanel.textContent).toMatch(/на 2\s000\s֏/)
+    expect(previewPanel.textContent).toMatch(/только доходы/)
+
+    fireEvent.click(screen.getByRole('button', { name: /создать правило/i }))
+    expect(onCreateRule).toHaveBeenCalledWith({
+      match: 'ԱՆՁՆԱԿԱՆ ՓՈԽԱՆՑՈՒՄ', category: 'salary', direction: 'income',
+    })
+    // Служебный ключ исходной операции в сохранённое правило не попадает.
+    expect(onCreateRule.mock.calls[0][0]).not.toHaveProperty('sourceKey')
   })
 
   it('если все совпадения правила лежат в одной (не AMD) валюте, сумма подписана этой валютой', () => {
