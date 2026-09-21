@@ -7,7 +7,8 @@ import { formatAmd, formatMonth } from './format.js'
 export function OverviewScreen({ transactions, categories }) {
   const months = useMemo(() => byMonth(transactions), [transactions])
   const [selected, setSelected] = useState(null)
-  const activeMonth = selected ?? months[months.length - 1]?.month ?? null
+  // Only use selected if it still exists in the current data; fall back to latest month
+  const activeMonth = months.some(m => m.month === selected) ? selected : months[months.length - 1]?.month ?? null
 
   const inMonth = useMemo(
     () => (activeMonth ? transactions.filter((tx) => monthOf(tx.date) === activeMonth) : []),
@@ -62,7 +63,7 @@ export function OverviewScreen({ transactions, categories }) {
         </p>
         <p>
           Кредит с процентами:{' '}
-          <strong>{formatAmd(sumOf('loan_principal') + sumOf('loan_interest'))}</strong>
+          <strong data-testid="loan-total">{formatAmd(sumOf('loan_principal') + sumOf('loan_interest'))}</strong>
         </p>
       </div>
 
