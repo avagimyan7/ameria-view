@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react'
 import { totals, byMonth, byCategory, countable } from '../stats/aggregate.js'
 import { monthOf } from '../import/date.js'
 import { MonthBars } from './charts/MonthBars.jsx'
-import { formatAmd, formatMonth } from './format.js'
+import { formatMoney, formatMonth } from './format.js'
 
-export function OverviewScreen({ transactions, categories }) {
-  const months = useMemo(() => byMonth(transactions), [transactions])
+export function OverviewScreen({ transactions, categories, currency = null }) {
+  const months = useMemo(() => byMonth(transactions, currency), [transactions, currency])
   const [selected, setSelected] = useState(null)
   // Only use selected if it still exists in the current data; fall back to latest month
   const activeMonth = months.some(m => m.month === selected) ? selected : months[months.length - 1]?.month ?? null
@@ -15,15 +15,15 @@ export function OverviewScreen({ transactions, categories }) {
     [transactions, activeMonth],
   )
 
-  const monthTotals = totals(inMonth)
-  const expenses = byCategory(inMonth, 'expense')
+  const monthTotals = totals(inMonth, currency)
+  const expenses = byCategory(inMonth, 'expense', currency)
   const nameOf = (id) =>
     categories.find((category) => category.id === id)?.name ?? 'Без категории'
   const colourOf = (id) =>
     categories.find((category) => category.id === id)?.color ?? 'var(--muted)'
   const sumOf = (id) => expenses.find((row) => row.categoryId === id)?.amount ?? 0
 
-  if (countable(transactions).length === 0) {
+  if (countable(transactions, currency).length === 0) {
     return <p className="muted">Нет данных — импортируй выгрузку из myAmeria на вкладке «Импорт».</p>
   }
 
@@ -39,19 +39,19 @@ export function OverviewScreen({ transactions, categories }) {
         <div className="panel">
           <div className="muted">Пришло</div>
           <div className="income" data-testid="total-income" style={{ fontSize: 24 }}>
-            {formatAmd(monthTotals.income)}
+            {formatMoney(monthTotals.income, currency)}
           </div>
         </div>
         <div className="panel">
           <div className="muted">Ушло</div>
           <div className="expense" data-testid="total-expense" style={{ fontSize: 24 }}>
-            {formatAmd(monthTotals.expense)}
+            {formatMoney(monthTotals.expense, currency)}
           </div>
         </div>
         <div className="panel">
           <div className="muted">Осталось</div>
           <div data-testid="total-net" style={{ fontSize: 24 }}>
-            {formatAmd(monthTotals.net)}
+            {formatMoney(monthTotals.net, currency)}
           </div>
         </div>
       </div>
@@ -59,11 +59,11 @@ export function OverviewScreen({ transactions, categories }) {
       <div className="panel" style={{ marginTop: 12 }}>
         <div className="muted">То, что обычно не замечают</div>
         <p>
-          Комиссии банка: <strong data-testid="fees-total">{formatAmd(sumOf('fees'))}</strong>
+          Комиссии банка: <strong data-testid="fees-total">{formatMoney(sumOf('fees'), currency)}</strong>
         </p>
         <p>
           Кредит с процентами:{' '}
-          <strong data-testid="loan-total">{formatAmd(sumOf('loan_principal') + sumOf('loan_interest'))}</strong>
+          <strong data-testid="loan-total">{formatMoney(sumOf('loan_principal') + sumOf('loan_interest'), currency)}</strong>
         </p>
       </div>
 
@@ -81,7 +81,7 @@ export function OverviewScreen({ transactions, categories }) {
                   {nameOf(row.categoryId)}
                 </td>
                 <td className="num muted">{row.count}</td>
-                <td className="num">{formatAmd(row.amount)}</td>
+                <td className="num">{formatMoney(row.amount, currency)}</td>
               </tr>
             ))}
           </tbody>

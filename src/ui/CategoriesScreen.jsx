@@ -3,19 +3,19 @@ import { byCategory, uncategorized } from '../stats/aggregate.js'
 import { budgetProgress } from '../stats/budget.js'
 import { monthOf } from '../import/date.js'
 import { CategoryBars } from './charts/CategoryBars.jsx'
-import { formatAmd } from './format.js'
+import { formatMoney } from './format.js'
 
 export function CategoriesScreen({
-  transactions, categories, budgets, month, today, onChangeBudget, onShowUncategorized,
+  transactions, categories, budgets, month, today, onChangeBudget, onShowUncategorized, currency = null,
 }) {
   const inMonth = useMemo(
     () => transactions.filter((tx) => monthOf(tx.date) === month),
     [transactions, month],
   )
-  const rows = byCategory(inMonth, 'expense')
-  const pending = uncategorized(transactions)
+  const rows = byCategory(inMonth, 'expense', currency)
+  const pending = uncategorized(transactions, currency)
   const pendingAmount = pending.reduce((acc, tx) => acc + tx.amount, 0)
-  const progress = budgetProgress(transactions, budgets, month, today)
+  const progress = budgetProgress(transactions, budgets, month, today, currency)
   const nameOf = (id) => categories.find((c) => c.id === id)?.name ?? id
 
   // Create a map of actual spending by category for the month
@@ -31,14 +31,14 @@ export function CategoriesScreen({
     <div>
       <div className="panel">
         <h3>Расходы по категориям</h3>
-        <CategoryBars rows={rows} categories={categories} />
+        <CategoryBars rows={rows} categories={categories} currency={currency} />
       </div>
 
       {pending.length > 0 && (
         <div className="panel" style={{ marginTop: 12 }}>
           <h3>Без категории</h3>
           <p data-testid="uncategorized-summary">
-            {pending.length} операций на {formatAmd(pendingAmount)}. Начни с самых крупных —
+            {pending.length} операций на {formatMoney(pendingAmount, currency)}. Начни с самых крупных —
             в них лежит почти весь неопознанный оборот.
           </p>
           <button type="button" onClick={onShowUncategorized}>Разобрать</button>
@@ -87,10 +87,10 @@ export function CategoriesScreen({
                     />
                   </td>
                   <td className="num" data-testid={`budget-${category.id}-spent`}>
-                    {formatAmd(spent)}
+                    {formatMoney(spent, currency)}
                   </td>
                   <td className="num" data-testid={`budget-${category.id}-projected`}>
-                    {limit > 0 ? formatAmd(projectedTotal) : ''}
+                    {limit > 0 ? formatMoney(projectedTotal, currency) : ''}
                   </td>
                   <td className="expense" data-testid={`budget-${category.id}-overrun`}>
                     {overrunText}

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { filterTransactions, NO_CATEGORY } from '../stats/filter.js'
 import { rulePreview } from '../rules/match.js'
 import { suggestRuleText } from '../rules/normalize.js'
-import { formatAmd, formatDate } from './format.js'
+import { formatAmd, formatDate, formatMoney } from './format.js'
 
 export function TransactionsScreen({
   transactions, categories, onAssign, onCreateRule, initialFilters = {}, initialSort = 'date',
@@ -122,7 +122,7 @@ export function TransactionsScreen({
                   </select>
                 </td>
                 <td className={`num ${tx.direction === 'income' ? 'income' : tx.direction === 'expense' ? 'expense' : 'muted'}`}>
-                  {formatAmd(tx.amount)}
+                  {formatMoney(tx.amount, tx.currency)}
                 </td>
               </tr>
             ))}

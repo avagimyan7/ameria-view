@@ -14,9 +14,9 @@ function elapsedDays(month, today) {
   return Math.min(total, Number(today.slice(8, 10)))
 }
 
-export function budgetProgress(transactions, budgets, month, today) {
+export function budgetProgress(transactions, budgets, month, today, currency = null) {
   const spentByCategory = new Map()
-  for (const tx of countable(transactions)) {
+  for (const tx of countable(transactions, currency)) {
     if (tx.direction !== 'expense' || monthOf(tx.date) !== month) continue
     const current = spentByCategory.get(tx.categoryId) ?? 0
     spentByCategory.set(tx.categoryId, current + tx.amount)

@@ -4,6 +4,14 @@ export function formatAmd(luma) {
   return `${formatAmount(luma)} ֏`
 }
 
+// Банк не даёт курсов, поэтому суммы разных валют никогда не складываются —
+// но их подписи обязаны отличаться, иначе доллар выглядит как драм.
+// AMD (и неизвестная/неуказанная валюта) сохраняет привычный знак ֏,
+// любая другая валюта подписывается своим кодом (например, «50 USD»).
+export function formatMoney(luma, currency) {
+  return currency && currency !== 'AMD' ? `${formatAmount(luma)} ${currency}` : formatAmd(luma)
+}
+
 export function formatDate(iso) {
   if (!iso) return ''
   const [year, month, day] = iso.split('-')
