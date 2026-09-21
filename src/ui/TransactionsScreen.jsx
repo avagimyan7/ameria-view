@@ -53,7 +53,7 @@ export function TransactionsScreen({ transactions, categories, onAssign, onCreat
       {pendingRule && preview && (
         <div className="panel" style={{ marginTop: 12 }}>
           <p>
-            Правило «{pendingRule.match}» затронет ещё {preview.count} операций
+            Правило «{pendingRule.match}» затронет ещё {Math.max(0, preview.count - 1)} операций
             на {formatAmd(preview.amount)}.
           </p>
           <button type="button" onClick={() => { onCreateRule(pendingRule); setPendingRule(null) }}>
