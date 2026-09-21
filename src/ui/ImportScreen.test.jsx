@@ -172,6 +172,31 @@ describe('ImportScreen', () => {
     }
   })
 
+  it('пока недоступен, не импортирует ни выбранный, ни перетащенный файл', () => {
+    const onImport = vi.fn()
+    // FileReader, который отвечает сразу: без защиты onImport был бы вызван синхронно.
+    const OriginalFileReader = window.FileReader
+    window.FileReader = class {
+      readAsArrayBuffer() {
+        this.result = new ArrayBuffer(1)
+        this.onload?.()
+      }
+    }
+    try {
+      const { container } = render(
+        <ImportScreen onImport={onImport} onConfirmAccounts={() => {}} disabled />,
+      )
+      const input = container.querySelector('input[type="file"]')
+      expect(input.disabled).toBe(true)
+      const file = new File(['x'], 'export.xlsx')
+      fireEvent.change(input, { target: { files: [file] } })
+      fireEvent.drop(container.querySelector('.dropzone'), { dataTransfer: { files: [file] } })
+      expect(onImport).not.toHaveBeenCalled()
+    } finally {
+      window.FileReader = OriginalFileReader
+    }
+  })
+
   it('сбрасывает value инпута после выбора файла — иначе повторный выбор того же файла не пришлёт change в браузере', async () => {
     const onImport = vi.fn()
     // Этот файл не вызывает cleanup() между тестами (как и соседние тесты

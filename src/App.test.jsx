@@ -1,7 +1,8 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 import * as pipelineModule from './import/pipeline.js'
+import * as dbModule from './store/db.js'
 import App from './App.jsx'
 import { clearTransactions, saveTransactions } from './store/db.js'
 import { NO_CATEGORY } from './stats/filter.js'
@@ -42,6 +43,8 @@ describe('App import flow', () => {
       })
 
       const fileInput = container.querySelector('input[type="file"]')
+      // Импорт открывается только после первой загрузки хранилища.
+      await waitFor(() => expect(fileInput.disabled).toBe(false))
       const file1 = new File([new Uint8Array([1, 2, 3])], 'test1.xlsx')
       fireEvent.change(fileInput, { target: { files: [file1] } })
 
@@ -112,10 +115,9 @@ describe('App transactions preset reset on navigation', () => {
 
     render(<App />)
 
-    // App грузит транзакции из IndexedDB асинхронно и сам переключает экран на «Обзор»,
-    // когда данные приходят (см. useEffect в App.jsx). Если кликнуть «Категории» до того,
-    // как это доигралось, этот же эффект молча откатит нас обратно на «Обзор». Поэтому
-    // сперва дожидаемся, что данные точно загружены, и только потом идём в «Категории».
+    // App грузит транзакции из IndexedDB асинхронно и, если человек ещё на экране
+    // импорта, сам переключает экран на «Обзор». Дожидаемся этого, чтобы кнопка
+    // «Разобрать» ниже уже видела загруженную операцию.
     await screen.findByTestId('loan-total')
 
     fireEvent.click(screen.getByRole('button', { name: 'Категории' }))
@@ -232,6 +234,8 @@ describe('App currency selection does not outlive its data', () => {
       })
 
       const fileInput = container.querySelector('input[type="file"]')
+      // Импорт открывается только после первой загрузки хранилища.
+      await waitFor(() => expect(fileInput.disabled).toBe(false))
       fireEvent.change(fileInput, { target: { files: [new File([new Uint8Array([1, 2, 3])], 'a.xlsx')] } })
       // Оба отчёта об импорте говорят «Импорт завершён» — ждать нужно чего-то,
       // что различает первый отчёт от второго, иначе waitFor может решить, что
@@ -375,5 +379,97 @@ describe('App: направление производно от текущего
     fireEvent.click(screen.getByRole('button', { name: /не мои/i }))
     expect(screen.queryByTestId('accounts-prompt')).toBeNull()
     expect(loadSettings().ownAccounts).toEqual([A])
+  })
+})
+
+function deferred() {
+  let resolve
+  let reject
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej })
+  return { promise, resolve, reject }
+}
+
+describe('App: первая загрузка из хранилища не гоняется с действиями человека', () => {
+  let loadSpy
+
+  beforeEach(async () => {
+    cleanup()
+    await clearTransactions()
+    localStorage.clear()
+  })
+
+  afterEach(async () => {
+    loadSpy?.mockRestore()
+    loadSpy = null
+    cleanup()
+    await clearTransactions()
+  })
+
+  it('вкладка, выбранная до окончания загрузки, не перебивается переходом на обзор', async () => {
+    const load = deferred()
+    loadSpy = vi.spyOn(dbModule, 'loadTransactions').mockImplementation(() => load.promise)
+
+    render(<App />)
+    fireEvent.click(screen.getByRole('button', { name: 'Категории' }))
+
+    await act(async () => { load.resolve([uncategorizedTx({ key: 'stored-1' })]) })
+
+    expect(screen.getByTestId('categories-heading')).toBeTruthy()
+    expect(screen.queryByTestId('total-expense')).toBeNull()
+  })
+
+  it('с пустого экрана импорта после загрузки по-прежнему переходит на обзор', async () => {
+    const load = deferred()
+    loadSpy = vi.spyOn(dbModule, 'loadTransactions').mockImplementation(() => load.promise)
+
+    render(<App />)
+    await act(async () => { load.resolve([uncategorizedTx({ key: 'stored-1' })]) })
+
+    expect(screen.getByTestId('total-expense')).toBeTruthy()
+  })
+
+  it('импорт недоступен, пока сохранённые операции не загружены', async () => {
+    const load = deferred()
+    loadSpy = vi.spyOn(dbModule, 'loadTransactions').mockImplementation(() => load.promise)
+
+    const { container } = render(<App />)
+    const fileInput = container.querySelector('input[type="file"]')
+    expect(fileInput.disabled).toBe(true)
+    expect(screen.getByText(/Загружаю сохранённые операции/)).toBeTruthy()
+
+    await act(async () => { load.resolve([]) })
+
+    expect(fileInput.disabled).toBe(false)
+    expect(screen.queryByText(/Загружаю сохранённые операции/)).toBeNull()
+  })
+
+  it('настройки, изменённые до окончания загрузки, применяются к загруженным операциям', async () => {
+    saveSettings({ ...defaultSettings(), rules: [{ match: 'ZZ MERCHANT', category: 'groceries' }] })
+    const load = deferred()
+    loadSpy = vi.spyOn(dbModule, 'loadTransactions').mockImplementation(() => load.promise)
+
+    render(<App />)
+    // Пока хранилище отвечает, человек успевает удалить правило.
+    fireEvent.click(screen.getByRole('button', { name: 'Настройки' }))
+    fireEvent.click(screen.getByTestId('rule-remove-0'))
+
+    await act(async () => {
+      load.resolve([uncategorizedTx({ key: 'zz-1', details: 'ZZ MERCHANT' })])
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Транзакции' }))
+    // Категория посчитана по текущим настройкам (правила нет), а не по стартовым.
+    expect(screen.getByTestId('assign-zz-1').value).toBe('')
+  })
+
+  it('ошибку чтения хранилища показывает, а не глотает, и импорт не открывает', async () => {
+    loadSpy = vi.spyOn(dbModule, 'loadTransactions')
+      .mockImplementation(() => Promise.reject(new Error('IndexedDB недоступна')))
+
+    const { container } = render(<App />)
+
+    expect(await screen.findByText(/Не удалось прочитать сохранённые операции/)).toBeTruthy()
+    expect(screen.getByText(/IndexedDB недоступна/)).toBeTruthy()
+    expect(container.querySelector('input[type="file"]').disabled).toBe(true)
   })
 })

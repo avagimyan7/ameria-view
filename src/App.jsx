@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './ui/theme.css'
 import { Layout } from './ui/Layout.jsx'
 import { ImportScreen } from './ui/ImportScreen.jsx'
@@ -32,7 +32,15 @@ function addAccounts(current, confirmed) {
 export default function App() {
   const [screen, setScreen] = useState('import')
   const [settings, setSettings] = useState(() => loadSettings())
+  // Эффект первой загрузки читает настройки в момент, когда хранилище ответило,
+  // а не те, что были при первом рендере: человек успевает их поменять.
+  const settingsRef = useRef(settings)
   const [transactions, setTransactions] = useState([])
+  // Пока сохранённые операции не загружены, импорт закрыт: иначе он сольётся
+  // с пустым списком, назовёт сохранённое «добавленным», а потом загрузка
+  // перетрёт результат на экране устаревшим списком.
+  const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(null)
   const [report, setReport] = useState(null)
   const [detectedAccounts, setDetectedAccounts] = useState([])
   const [error, setError] = useState(null)
@@ -50,14 +58,31 @@ export default function App() {
   const activeCurrency = currencies.includes(currency) ? currency : currencies[0] ?? null
 
   useEffect(() => {
-    loadTransactions().then((stored) => {
-      setTransactions(derive(stored, settings))
-      if (stored.length > 0) setScreen('overview')
-    })
-    // Настройки читаются один раз при старте; дальше состояние ведёт приложение.
+    let cancelled = false
+    loadTransactions()
+      .then((stored) => {
+        if (cancelled) return
+        setTransactions(derive(stored, settingsRef.current))
+        // На обзор — только если человек за время загрузки не ушёл с экрана импорта сам.
+        if (stored.length > 0) setScreen((current) => (current === 'import' ? 'overview' : current))
+        setLoaded(true)
+      })
+      .catch((failure) => {
+        if (cancelled) return
+        // Импорт остаётся закрытым: слияние с непрочитанным хранилищем дало бы
+        // неверный отчёт и неверный список на экране.
+        setLoadError(
+          `Не удалось прочитать сохранённые операции: ${failure?.message ?? failure}. ` +
+            'Импорт отключён, чтобы не выдать сохранённое за новое. Перезагрузи страницу.',
+        )
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const updateSettings = (next) => {
+    settingsRef.current = next
     setSettings(next)
     saveSettings(next)
     setTransactions((current) => derive(current, next))
@@ -105,6 +130,9 @@ export default function App() {
 
   return (
     <Layout screen={screen} onNavigate={handleNavigate}>
+      {loadError && (
+        <p className="expense" role="alert">{loadError}</p>
+      )}
       {currencies.length > 1 && (
         <div className="panel" style={{ marginBottom: 12 }}>
           <label>
@@ -133,6 +161,7 @@ export default function App() {
           detectedAccounts={detectedAccounts}
           ownAccounts={settings.ownAccounts}
           error={error}
+          disabled={!loaded}
         />
       )}
       {screen === 'overview' && (

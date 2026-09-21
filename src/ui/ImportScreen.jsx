@@ -46,12 +46,13 @@ function AccountsPrompt({ accounts, onConfirm, onDecline }) {
 
 export function ImportScreen({
   onImport, onConfirmAccounts, onDeclineAccounts = () => {}, report, detectedAccounts = [],
-  ownAccounts = [], error,
+  ownAccounts = [], error, disabled = false,
 }) {
   const [isOver, setIsOver] = useState(false)
 
   const readFile = (file) => {
-    if (!file) return
+    // disabled — пока приложение не дочитало сохранённые операции.
+    if (!file || disabled) return
     const reader = new FileReader()
     reader.onload = () => onImport(new Uint8Array(reader.result))
     reader.onerror = () => {
@@ -80,9 +81,10 @@ export function ImportScreen({
           setIsOver(false)
           readFile(event.dataTransfer.files[0])
         }}
-        onClick={() => document.getElementById('file-input').click()}
+        onClick={() => { if (!disabled) document.getElementById('file-input').click() }}
+        aria-disabled={disabled}
       >
-        <p>Перетащи сюда выгрузку из myAmeria</p>
+        <p>{disabled ? 'Загружаю сохранённые операции…' : 'Перетащи сюда выгрузку из myAmeria'}</p>
         <p className="muted">
           myameria.am/history → кнопка Filter справа → выставь даты → секция Actions → кнопка Excel
         </p>
@@ -91,6 +93,7 @@ export function ImportScreen({
           type="file"
           accept=".xls,.xlsx"
           style={{ display: 'none' }}
+          disabled={disabled}
           onChange={(event) => {
             readFile(event.target.files[0])
             // Сбросить value: без этого повторный выбор того же файла
