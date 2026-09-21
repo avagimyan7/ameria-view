@@ -69,4 +69,21 @@ describe('budgetProgress', () => {
       projectedTotal: 0, overrunDay: null,
     })
   })
+
+  it('не считает неподтверждённые транзакции', () => {
+    const list = [
+      tx({ amount: 120000 }),
+      tx({ amount: 80000, status: 'Չեղարկված' }),
+    ]
+    const [row] = budgetProgress(list, budgets, '2026-09', '2026-09-10')
+    expect(row.spent).toBe(120000)
+  })
+
+  it('не прогнозирует для будущих месяцев', () => {
+    const list = [tx({ amount: 150000, date: '2026-08-15' })]
+    const [row] = budgetProgress(list, budgets, '2026-10', '2026-09-10')
+    expect(row.spent).toBe(0)
+    expect(row.projectedTotal).toBe(0)
+    expect(row.overrunDay).toBeNull()
+  })
 })
