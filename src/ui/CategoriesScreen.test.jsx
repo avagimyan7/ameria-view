@@ -105,6 +105,28 @@ describe('CategoriesScreen', () => {
     expect(onChangeBudget).toHaveBeenCalledWith('groceries', 500000)
   })
 
+  it('называет месяц, за который построены полосы категорий', () => {
+    render(<CategoriesScreen {...props} month="2026-08" transactions={[tx({ date: '2026-08-10' })]} />)
+    expect(screen.getByTestId('categories-heading').textContent).toMatch(/август 2026/)
+  })
+
+  it('честно называет масштаб очереди «Без категории»: весь период, доходы и расходы вместе', () => {
+    render(
+      <CategoriesScreen {...props} month="2026-09"
+        transactions={[
+          // Прошлый месяц — вне полос за сентябрь, но в очереди разбора.
+          tx({ categoryId: null, date: '2026-08-05', amount: 100000 }),
+          // Доход — тоже в очереди.
+          tx({ categoryId: null, direction: 'income', date: '2026-09-02', amount: 200000 }),
+        ]} />,
+    )
+    const summary = screen.getByTestId('uncategorized-summary').textContent
+    expect(summary).toMatch(/весь период/)
+    expect(summary).toMatch(/доходы и расходы/)
+    // Очередь считает всё время, а не только выбранный месяц — это намеренно.
+    expect(summary).toMatch(/(^|\D)2 операц/)
+  })
+
   it('счет неразобранных не включает внутренние переводы', () => {
     render(
       <CategoriesScreen {...props}
