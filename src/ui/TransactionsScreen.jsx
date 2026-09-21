@@ -23,10 +23,12 @@ export function TransactionsScreen({ transactions, categories, onAssign, onCreat
       return
     }
     const match = suggestRuleText(tx)
-    if (match) setPendingRule({ match, category: categoryId })
+    if (match) setPendingRule({ match, category: categoryId, sourceKey: tx.key })
   }
 
-  const preview = pendingRule ? rulePreview(transactions, pendingRule) : null
+  const preview = pendingRule
+    ? rulePreview(transactions.filter((t) => t.key !== pendingRule.sourceKey), pendingRule)
+    : null
 
   return (
     <div>
@@ -53,10 +55,10 @@ export function TransactionsScreen({ transactions, categories, onAssign, onCreat
       {pendingRule && preview && (
         <div className="panel" style={{ marginTop: 12 }}>
           <p>
-            Правило «{pendingRule.match}» затронет ещё {Math.max(0, preview.count - 1)} операций
+            Правило «{pendingRule.match}» затронет ещё {preview.count} операций
             на {formatAmd(preview.amount)}.
           </p>
-          <button type="button" onClick={() => { onCreateRule(pendingRule); setPendingRule(null) }}>
+          <button type="button" onClick={() => { onCreateRule({ match: pendingRule.match, category: pendingRule.category }); setPendingRule(null) }}>
             Создать правило
           </button>
           <button type="button" onClick={() => setPendingRule(null)}>Не надо</button>

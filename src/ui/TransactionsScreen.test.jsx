@@ -105,16 +105,16 @@ describe('TransactionsScreen', () => {
         transactions={[
           tx(),
           tx({ key: 'k2', details: 'Ք: ASK 23 LLC YEREVAN AM 190677' }),
-          tx({ key: 'k3', details: 'Ք: DIFFERENT MERCHANT YEREVAN AM 999999', amount: 200000 }),
+          tx({ key: 'k3', details: 'Ք: ASK 23 LLC YEREVAN AM 887773' }),
+          tx({ key: 'k4', details: 'Ք: DIFFERENT MERCHANT YEREVAN AM 999999', amount: 200000 }),
         ]}
         categories={SEED_CATEGORIES} onAssign={noop} onCreateRule={onCreateRule} />,
     )
     fireEvent.change(screen.getByTestId('assign-k1'), { target: { value: 'groceries' } })
-    // Should show 1 additional operation (k1 current + k2 match = 2 total, minus 1 current = 1 additional)
-    // k3 does not match
-    expect(screen.getByText(/затронет ещё 1/i)).toBeTruthy()
-    // Also verify the total amount is calculated (100000 + 100000 = 200000 luma = 2000 AMD)
-    const previewPanel = screen.getByText(/затронет ещё 1/i).closest('.panel')
+    // Preview excludes source transaction (k1), counts k2 and k3 (both match ASK 23 LLC), not k4 (DIFFERENT)
+    // count = 2 (k2 and k3), amount = 100000 + 100000 = 200000 luma = 2000 AMD
+    expect(screen.getByText(/затронет ещё 2/i)).toBeTruthy()
+    const previewPanel = screen.getByText(/затронет ещё 2/i).closest('.panel')
     expect(/2\s000\s֏/.test(previewPanel.textContent)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /создать правило/i }))
     expect(onCreateRule).toHaveBeenCalledWith({ match: 'ASK 23 LLC YEREVAN AM', category: 'groceries' })
