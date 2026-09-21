@@ -4,11 +4,19 @@ import { rulePreview } from '../rules/match.js'
 import { suggestRuleText } from '../rules/normalize.js'
 import { formatAmd, formatDate } from './format.js'
 
-export function TransactionsScreen({ transactions, categories, onAssign, onCreateRule }) {
-  const [filters, setFilters] = useState({})
+export function TransactionsScreen({
+  transactions, categories, onAssign, onCreateRule, initialFilters = {}, initialSort = 'date',
+}) {
+  const [filters, setFilters] = useState(initialFilters)
+  const [sort, setSort] = useState(initialSort)
   const [pendingRule, setPendingRule] = useState(null)
 
-  const visible = useMemo(() => filterTransactions(transactions, filters), [transactions, filters])
+  const visible = useMemo(() => {
+    const rows = filterTransactions(transactions, filters)
+    return sort === 'amount'
+      ? [...rows].sort((a, b) => b.amount - a.amount)
+      : [...rows].sort((a, b) => b.date.localeCompare(a.date))
+  }, [transactions, filters, sort])
   const set = (field) => (event) =>
     setFilters((current) => ({ ...current, [field]: event.target.value || undefined }))
 
@@ -49,6 +57,10 @@ export function TransactionsScreen({ transactions, categories, onAssign, onCreat
           {categories.map((category) => (
             <option key={category.id} value={category.id}>{category.name}</option>
           ))}
+        </select>
+        <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Сортировка">
+          <option value="date">Сначала свежие</option>
+          <option value="amount">Сначала крупные</option>
         </select>
       </div>
 
