@@ -473,3 +473,46 @@ describe('App: первая загрузка из хранилища не гон
     expect(container.querySelector('input[type="file"]').disabled).toBe(true)
   })
 })
+
+describe('App: «сегодня» — по местному времени, а не по UTC', () => {
+  const savedTz = process.env.TZ
+
+  beforeEach(async () => {
+    cleanup()
+    await clearTransactions()
+    localStorage.clear()
+    // 1 сентября, 02:00 по Еревану (UTC+4) — в UTC это ещё 31 августа.
+    process.env.TZ = 'Asia/Yerevan'
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 1, 2, 0))
+  })
+
+  afterEach(async () => {
+    vi.useRealTimers()
+    if (savedTz === undefined) delete process.env.TZ
+    else process.env.TZ = savedTz
+    cleanup()
+    await clearTransactions()
+  })
+
+  it('без операций экран категорий показывает текущий месяц по местному времени', async () => {
+    const { container } = render(<App />)
+    await waitFor(() => expect(container.querySelector('input[type="file"]').disabled).toBe(false))
+    fireEvent.click(screen.getByRole('button', { name: 'Категории' }))
+    expect(screen.getByTestId('categories-heading').textContent).toMatch(/сентябрь 2026/)
+  })
+
+  it('прогноз бюджета считает 1 сентября уже наступившим днём', async () => {
+    saveSettings({ ...defaultSettings(), budgets: { groceries: 300000 } })
+    await saveTransactions([
+      uncategorizedTx({ key: 'ask-1', date: '2026-09-01', details: 'ASK 23 LLC', amount: 100000 }),
+    ])
+    render(<App />)
+    await screen.findByTestId('total-expense')
+    fireEvent.click(screen.getByRole('button', { name: 'Категории' }))
+    // 1 000 ֏ за один прошедший день из 30 → прогноз 30 000 ֏. По UTC было бы
+    // «31 августа», месяц ещё не начался, и прогноз вышел бы нулевым.
+    expect(screen.getByTestId('budget-groceries-projected').textContent)
+      .toBe(formatMoney(3000000, 'AMD'))
+  })
+})
