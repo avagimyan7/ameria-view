@@ -39,10 +39,21 @@ describe('importWorkbook', () => {
   })
 
   it('уважает подтверждённый список счетов', () => {
-    const result = importWorkbook(workbook([dataRow({ from: 'MINE1', to: 'MINE2' })]), {
+    const result = importWorkbook(workbook([dataRow({ from: 'MINE1', to: 'MINE2', opType: OP.BETWEEN_OWN })]), {
       ownAccounts: ['MINE1', 'MINE2'],
     })
     expect(result.transactions[0].direction).toBe('internal')
+    expect(result.detectedAccounts).toEqual(['MINE1', 'MINE2'])
+  })
+
+  it('пустой ownAccounts падает назад на обнаружение, не берёт пустой список буквально', () => {
+    const result = importWorkbook(workbook([dataRow({ from: 'MINE1' })]), {
+      ownAccounts: [],
+    })
+    // Пустой подтверждённый список должен НЕ приниматься как "у человека нет своих счетов"
+    // Должен упасть на автообнаружение, которое находит MINE1 из CARD операции
+    expect(result.transactions[0].direction).toBe('expense')
+    expect(result.detectedAccounts).toEqual(['MINE1'])
   })
 
   it('повторная загрузка того же файла не добавляет дублей', () => {
