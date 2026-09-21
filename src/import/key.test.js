@@ -57,10 +57,37 @@ describe('mergeTransactions', () => {
     expect(merged.map((t) => t.date)).toEqual(['2026-09-01', '2026-09-10', '2026-09-20'])
   })
 
-  it('не затирает уже сохранённую операцию входящей копией', () => {
-    const existing = assignKeys([tx({ categoryId: 'groceries' })])
-    const incoming = assignKeys([tx()])
+  // Прежде здесь было обратное: «сохранённая копия побеждает». Это держалось на
+  // том, что в ней лежит что-то невосстановимое. Но поля ключа у двух копий
+  // совпадают по определению, а различаться могут только статус и производные
+  // direction/categoryId — ручные категории живут в settings.overrides по ключу
+  // и накладываются заново. Зато «сохранённая побеждает» навсегда замораживала
+  // и устаревший статус, и направление, посчитанное по старому списку счетов.
+  it('на совпадающем ключе берёт входящую копию, а не сохранённую', () => {
+    const existing = assignKeys([tx({ direction: 'expense', categoryId: 'groceries' })])
+    const incoming = assignKeys([tx({ direction: 'internal', categoryId: null })])
+    const { merged, added, duplicates } = mergeTransactions(existing, incoming)
+    expect(merged).toHaveLength(1)
+    expect(merged[0].direction).toBe('internal')
+    expect(merged[0].categoryId).toBeNull()
+    expect(added).toBe(0)
+    expect(duplicates).toBe(1)
+  })
+
+  it('операция, выгруженная сперва в ожидании, а потом подтверждённой, получает новый статус', () => {
+    const pending = assignKeys([tx({ status: 'Սպասման մեջ' })])
+    const approved = assignKeys([tx({ status: 'Հաստատված' })])
+    // Статус в ключ не входит — это одна и та же операция.
+    expect(approved[0].key).toBe(pending[0].key)
+    const { merged } = mergeTransactions(pending, approved)
+    expect(merged).toHaveLength(1)
+    expect(merged[0].status).toBe('Հաստատված')
+  })
+
+  it('не теряет сохранённые операции, которых нет во входящей выгрузке', () => {
+    const existing = assignKeys([tx({ date: '2026-09-01' })])
+    const incoming = assignKeys([tx({ date: '2026-09-20' })])
     const { merged } = mergeTransactions(existing, incoming)
-    expect(merged[0].categoryId).toBe('groceries')
+    expect(merged.map((t) => t.date)).toEqual(['2026-09-01', '2026-09-20'])
   })
 })

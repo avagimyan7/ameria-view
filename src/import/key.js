@@ -24,17 +24,19 @@ export function assignKeys(transactions) {
   })
 }
 
+// На совпадающем ключе побеждает входящая копия. Поля ключа у двух копий
+// одинаковы по определению; различаться могут только статус (операция была
+// в ожидании, а теперь подтверждена) и производные direction и categoryId,
+// которые приложение всё равно пересчитывает из настроек. Сохранённая копия
+// не несёт ничего невосстановимого: ручные категории лежат в settings.overrides.
 export function mergeTransactions(existing, incoming) {
   const byKey = new Map(existing.map((tx) => [tx.key, tx]))
   let added = 0
   let duplicates = 0
   for (const tx of incoming) {
-    if (byKey.has(tx.key)) {
-      duplicates += 1
-    } else {
-      byKey.set(tx.key, tx)
-      added += 1
-    }
+    if (byKey.has(tx.key)) duplicates += 1
+    else added += 1
+    byKey.set(tx.key, tx)
   }
   const merged = Array.from(byKey.values()).sort((a, b) =>
     a.date === b.date ? a.key.localeCompare(b.key) : a.date.localeCompare(b.date),

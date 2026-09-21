@@ -2,11 +2,22 @@ import { parseAmount } from './money.js'
 import { parseDate } from './date.js'
 import { assignKeys } from './key.js'
 
-function directionOf(fromMine, toMine) {
+function directionOf(tx, own) {
+  const fromMine = own.has(tx.fromAccount)
+  const toMine = own.has(tx.toAccount)
   if (fromMine && toMine) return 'internal'
   if (fromMine) return 'expense'
   if (toMine) return 'income'
   return 'unresolved'
+}
+
+// Направление — производное от списка своих счетов, а не свойство операции:
+// когда человек подтверждает новый счёт C, давний перевод A→C обязан сразу
+// стать внутренним, без повторного импорта. Поэтому приложение пересчитывает
+// его при загрузке, после импорта и при каждой смене настроек — как категорию.
+export function deriveDirections(transactions, ownAccounts) {
+  const own = new Set(ownAccounts)
+  return transactions.map((tx) => ({ ...tx, direction: directionOf(tx, own) }))
 }
 
 export function toTransactions(namedRows, ownAccounts) {
@@ -33,7 +44,7 @@ export function toTransactions(namedRows, ownAccounts) {
       status: row.status,
       amount,
       currency: row.currency,
-      direction: directionOf(own.has(row.fromAccount), own.has(row.toAccount)),
+      direction: directionOf(row, own),
       categoryId: null,
     }
   })

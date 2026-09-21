@@ -72,6 +72,52 @@ describe('importWorkbook', () => {
     expect(result.report.unresolved).toBe(1)
   })
 
+  it('повторная выгрузка переносит новый статус операции: была в ожидании — стала подтверждённой', () => {
+    const first = importWorkbook(workbook([dataRow({ status: 'Սպասման մեջ' })]), {
+      ownAccounts: ['MINE1'],
+    })
+    expect(first.transactions[0].status).toBe('Սպասման մեջ')
+
+    const second = importWorkbook(workbook([dataRow({ status: 'Հաստատված' })]), {
+      existingTransactions: first.transactions,
+      ownAccounts: ['MINE1'],
+    })
+    expect(second.report.added).toBe(0)
+    expect(second.report.duplicates).toBe(1)
+    expect(second.transactions).toHaveLength(1)
+    expect(second.transactions[0].status).toBe('Հաստատված')
+  })
+
+  it('пересчитывает направление и у сохранённых операций, а не только у пришедших', () => {
+    // Перевод MINE1→MINE3 сохранён, когда своими были только MINE1 и MINE2.
+    const first = importWorkbook(
+      workbook([dataRow({ opType: OP.TRANSFER_TO_ACCOUNT, from: 'MINE1', to: 'MINE3', date: '01-09-2026' })]),
+      { ownAccounts: ['MINE1', 'MINE2'] },
+    )
+    expect(first.transactions[0].direction).toBe('expense')
+
+    // Следующая выгрузка — уже с подтверждённым MINE3 и без той операции.
+    const second = importWorkbook(workbook([dataRow({ date: '20-09-2026' })]), {
+      existingTransactions: first.transactions,
+      ownAccounts: ['MINE1', 'MINE2', 'MINE3'],
+    })
+    const transfer = second.transactions.find((tx) => tx.toAccount === 'MINE3')
+    expect(transfer.direction).toBe('internal')
+  })
+
+  it('повторная загрузка известного файла не показывает «требуют внимания» за дубли', () => {
+    const bytes = workbook([dataRow({ from: 'X', to: 'Y', opType: OP.TRANSFER_TO_ACCOUNT })])
+    const first = importWorkbook(bytes, { ownAccounts: ['MINE1'] })
+    expect(first.report.unresolved).toBe(1)
+
+    const second = importWorkbook(bytes, {
+      existingTransactions: first.transactions,
+      ownAccounts: ['MINE1'],
+    })
+    expect(second.report.added).toBe(0)
+    expect(second.report.unresolved).toBe(0)
+  })
+
   it('на файле без единой операции отдаёт пустой отчёт, а не падает', () => {
     const result = importWorkbook(workbook([]))
     expect(result.transactions).toEqual([])

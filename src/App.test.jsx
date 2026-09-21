@@ -6,6 +6,9 @@ import App from './App.jsx'
 import { clearTransactions, saveTransactions } from './store/db.js'
 import { NO_CATEGORY } from './stats/filter.js'
 import { formatMoney } from './ui/format.js'
+import { buildWorkbook } from '../test/fixtures/buildWorkbook.js'
+import { HEADERS, OP } from './domain/constants.js'
+import { defaultSettings, saveSettings, loadSettings } from './store/settings.js'
 
 describe('App import flow', () => {
   beforeEach(async () => {
@@ -263,5 +266,114 @@ describe('App currency selection does not outlive its data', () => {
     } finally {
       importSpy.mockRestore()
     }
+  })
+})
+
+const HEADER_ROW = [
+  HEADERS.date, HEADERS.docNo, HEADERS.opType, HEADERS.fromAccount, HEADERS.toAccount,
+  HEADERS.counterparty, HEADERS.details, HEADERS.status, HEADERS.comment, HEADERS.amount,
+  HEADERS.currency,
+]
+const sheetRow = ({ date = '19-09-2026', opType, from, to, details, amount, status = 'Հաստատված' }) =>
+  [date, '31', opType, from, to, '', details, status, '', amount, 'AMD']
+
+describe('App: направление производно от текущего списка своих счетов', () => {
+  const A = '1570000000000001'
+  const B = '1570000000000002'
+  const C = '1570000000000003'
+
+  beforeEach(async () => {
+    cleanup()
+    await clearTransactions()
+    localStorage.clear()
+  })
+
+  afterEach(async () => {
+    cleanup()
+    await clearTransactions()
+  })
+
+  it('подтверждение нового счёта C делает давний перевод A→C внутренним без повторного импорта', async () => {
+    // Счета A и B уже подтверждены; C владелец завёл позже.
+    saveSettings({ ...defaultSettings(), ownAccounts: [A, B] })
+    const importSpy = vi.spyOn(pipelineModule, 'importWorkbook')
+
+    try {
+      const { container } = render(<App />)
+      const fileInput = container.querySelector('input[type="file"]')
+      await waitFor(() => expect(fileInput.disabled).toBe(false))
+
+      const bytes = buildWorkbook([
+        HEADER_ROW,
+        // Банк сам пометил перевод как «между моими счетами».
+        sheetRow({ opType: OP.BETWEEN_OWN, from: A, to: C, details: 'MOVE TO C', amount: '50000.0' }),
+        sheetRow({ opType: OP.CARD, from: A, to: 'SHOP', details: 'Ք: SHOP LLC 887772', amount: '1000.0' }),
+      ])
+      fireEvent.change(fileInput, { target: { files: [new File([bytes], 'export.xlsx')] } })
+      await waitFor(() => expect(screen.getByText('Строк в файле: 2')).toBeTruthy())
+
+      // Предложен только новый счёт C — A и B уже подтверждены.
+      const prompt = screen.getByTestId('accounts-prompt')
+      expect(prompt.textContent).toContain('1570…0003')
+      expect(prompt.textContent).not.toContain('1570…0001')
+
+      // До подтверждения C перевод A→C — расход, а не внутренний.
+      fireEvent.click(screen.getByRole('button', { name: 'Обзор' }))
+      expect(screen.getByTestId('total-expense').textContent).toBe(formatMoney(5100000, 'AMD'))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Импорт' }))
+      fireEvent.click(screen.getByRole('button', { name: /подтвердить счета/i }))
+
+      // Подтверждение добавило C к списку, а не заменило его.
+      expect(loadSettings().ownAccounts).toEqual([A, B, C])
+
+      // Без повторного импорта перевод стал внутренним и ушёл из расходов.
+      fireEvent.click(screen.getByRole('button', { name: 'Обзор' }))
+      expect(screen.getByTestId('total-expense').textContent).toBe(formatMoney(100000, 'AMD'))
+      expect(importSpy).toHaveBeenCalledTimes(1)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Транзакции' }))
+      fireEvent.change(
+        screen.getAllByRole('combobox').find((select) =>
+          Array.from(select.options).some((option) => option.value === 'internal')),
+        { target: { value: 'internal' } },
+      )
+      expect(screen.getByText('MOVE TO C')).toBeTruthy()
+    } finally {
+      importSpy.mockRestore()
+    }
+  })
+
+  it('пока ничего не подтверждено, при загрузке своими считаются найденные автоматически, а не «никакие»', async () => {
+    // Task 16: пустой подтверждённый список — не утверждение «своих счетов нет».
+    await saveTransactions([
+      uncategorizedTx({ key: 'card', fromAccount: A, toAccount: 'SHOP', amount: 100000, direction: 'unresolved' }),
+      uncategorizedTx({
+        key: 'move', opType: OP.BETWEEN_OWN, fromAccount: A, toAccount: B, amount: 5000000,
+        direction: 'unresolved',
+      }),
+    ])
+    render(<App />)
+    // Расход — только карточная покупка: перевод A→B внутренний, а не расход и не «неопознанный».
+    expect((await screen.findByTestId('total-expense')).textContent).toBe(formatMoney(100000, 'AMD'))
+    expect(screen.getByTestId('total-income').textContent).toBe(formatMoney(0, 'AMD'))
+  })
+
+  it('отказ от предложенного счёта оставляет список своих счетов как был', async () => {
+    saveSettings({ ...defaultSettings(), ownAccounts: [A] })
+    const { container } = render(<App />)
+    const fileInput = container.querySelector('input[type="file"]')
+    await waitFor(() => expect(fileInput.disabled).toBe(false))
+
+    const bytes = buildWorkbook([
+      HEADER_ROW,
+      sheetRow({ opType: OP.BETWEEN_OWN, from: A, to: B, details: 'MOVE TO B', amount: '100.0' }),
+    ])
+    fireEvent.change(fileInput, { target: { files: [new File([bytes], 'export.xlsx')] } })
+    await screen.findByTestId('accounts-prompt')
+
+    fireEvent.click(screen.getByRole('button', { name: /не мои/i }))
+    expect(screen.queryByTestId('accounts-prompt')).toBeNull()
+    expect(loadSettings().ownAccounts).toEqual([A])
   })
 })

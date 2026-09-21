@@ -7,11 +7,27 @@ import { TransactionsScreen } from './ui/TransactionsScreen.jsx'
 import { CategoriesScreen } from './ui/CategoriesScreen.jsx'
 import { SettingsScreen } from './ui/SettingsScreen.jsx'
 import { importWorkbook } from './import/pipeline.js'
+import { effectiveOwnAccounts } from './import/accounts.js'
+import { deriveDirections } from './import/transactions.js'
 import { applyCategories } from './rules/match.js'
 import { loadSettings, saveSettings } from './store/settings.js'
 import { loadTransactions, saveTransactions } from './store/db.js'
 import { byMonth, currenciesOf } from './stats/aggregate.js'
 import { NO_CATEGORY } from './stats/filter.js'
+
+// Направление и категория — производные от настроек, а не данные операции.
+// Сначала направление (правила могут быть сужены по нему), затем категории.
+// Так подтверждение нового своего счёта сразу переклассифицирует всю историю,
+// без повторного импорта.
+function derive(transactions, settings) {
+  const own = effectiveOwnAccounts(settings.ownAccounts, transactions)
+  return applyCategories(deriveDirections(transactions, own), settings)
+}
+
+// Подтверждённые счета добавляются к уже известным, а не заменяют их.
+function addAccounts(current, confirmed) {
+  return Array.from(new Set([...current, ...confirmed])).sort()
+}
 
 export default function App() {
   const [screen, setScreen] = useState('import')
@@ -35,7 +51,7 @@ export default function App() {
 
   useEffect(() => {
     loadTransactions().then((stored) => {
-      setTransactions(applyCategories(stored, settings))
+      setTransactions(derive(stored, settings))
       if (stored.length > 0) setScreen('overview')
     })
     // Настройки читаются один раз при старте; дальше состояние ведёт приложение.
@@ -44,7 +60,7 @@ export default function App() {
   const updateSettings = (next) => {
     setSettings(next)
     saveSettings(next)
-    setTransactions((current) => applyCategories(current, next))
+    setTransactions((current) => derive(current, next))
   }
 
   const handleAssign = (key, categoryId) =>
@@ -68,9 +84,9 @@ export default function App() {
         existingTransactions: transactions,
         ownAccounts: settings.ownAccounts,
       })
-      const categorized = applyCategories(result.transactions, settings)
-      await saveTransactions(categorized)
-      setTransactions(categorized)
+      const derived = derive(result.transactions, settings)
+      await saveTransactions(derived)
+      setTransactions(derived)
       setDetectedAccounts(result.detectedAccounts)
       setReport(result.report)
     } catch (importError) {
@@ -108,7 +124,11 @@ export default function App() {
       {screen === 'import' && (
         <ImportScreen
           onImport={handleImport}
-          onConfirmAccounts={(accounts) => updateSettings({ ...settings, ownAccounts: accounts })}
+          onConfirmAccounts={(accounts) => {
+            updateSettings({ ...settings, ownAccounts: addAccounts(settings.ownAccounts, accounts) })
+            setDetectedAccounts([])
+          }}
+          onDeclineAccounts={() => setDetectedAccounts([])}
           report={report}
           detectedAccounts={detectedAccounts}
           ownAccounts={settings.ownAccounts}

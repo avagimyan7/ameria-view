@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toTransactions } from './transactions.js'
+import { toTransactions, deriveDirections } from './transactions.js'
 import { OP } from '../domain/constants.js'
 
 const row = (over) => ({
@@ -47,5 +47,39 @@ describe('toTransactions', () => {
   it('называет номер строки в сообщении об ошибке', () => {
     expect(() => toTransactions([row(), row({ amount: 'мусор' })], own))
       .toThrow(/Строка 2/)
+  })
+})
+
+describe('deriveDirections', () => {
+  const stored = (over) => ({
+    key: 'k', date: '2026-09-19', opType: OP.BETWEEN_OWN, fromAccount: 'A', toAccount: 'C',
+    counterparty: '', details: '', comment: '', status: 'Հաստատված', amount: 100000,
+    currency: 'AMD', direction: 'expense', categoryId: null, ...over,
+  })
+
+  it('пересчитывает направление по переданному списку, а не хранит старое', () => {
+    // Перевод A→C сохранён как расход, пока C не был подтверждён своим.
+    const [before] = deriveDirections([stored()], ['A', 'B'])
+    expect(before.direction).toBe('expense')
+    const [after] = deriveDirections([stored()], ['A', 'B', 'C'])
+    expect(after.direction).toBe('internal')
+  })
+
+  it('даёт те же четыре направления, что и разбор при импорте', () => {
+    const list = [
+      stored({ key: '1', fromAccount: 'A', toAccount: 'SHOP' }),
+      stored({ key: '2', fromAccount: 'EMPLOYER', toAccount: 'A' }),
+      stored({ key: '3', fromAccount: 'A', toAccount: 'B' }),
+      stored({ key: '4', fromAccount: 'X', toAccount: 'Y', direction: 'income' }),
+    ]
+    expect(deriveDirections(list, ['A', 'B']).map((tx) => tx.direction))
+      .toEqual(['expense', 'income', 'internal', 'unresolved'])
+  })
+
+  it('не трогает остальные поля и не меняет исходный массив', () => {
+    const original = stored({ categoryId: 'transfers' })
+    const [derived] = deriveDirections([original], ['A', 'C'])
+    expect(derived).toEqual({ ...original, direction: 'internal' })
+    expect(original.direction).toBe('expense')
   })
 })
