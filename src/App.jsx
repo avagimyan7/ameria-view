@@ -5,6 +5,7 @@ import { ImportScreen } from './ui/ImportScreen.jsx'
 import { OverviewScreen } from './ui/OverviewScreen.jsx'
 import { TransactionsScreen } from './ui/TransactionsScreen.jsx'
 import { CategoriesScreen } from './ui/CategoriesScreen.jsx'
+import { SettingsScreen } from './ui/SettingsScreen.jsx'
 import { importWorkbook } from './import/pipeline.js'
 import { applyCategories } from './rules/match.js'
 import { loadSettings, saveSettings } from './store/settings.js'
@@ -117,7 +118,7 @@ export default function App() {
         />
       )}
       {screen === 'settings' && (
-        <p className="muted">Экран в разработке</p>
+        <SettingsScreen settings={settings} onChange={updateSettings} />
       )}
     </Layout>
   )
