@@ -81,4 +81,43 @@ describe('ImportScreen', () => {
     const reportPanel = container.querySelector('.panel')
     expect(reportPanel).toBeNull()
   })
+
+  it('показывает ошибку если браузер не может прочитать файл', () => {
+    const onImport = vi.fn()
+
+    // Stub FileReader to trigger onerror
+    const OriginalFileReader = window.FileReader
+    class MockFileReader {
+      readAsArrayBuffer() {
+        // Call onerror immediately to simulate failure
+        if (this.onerror) {
+          this.onerror()
+        }
+      }
+    }
+    window.FileReader = MockFileReader
+
+    try {
+      const { container } = render(
+        <ImportScreen
+          onImport={onImport}
+          onConfirmAccounts={() => {}}
+        />,
+      )
+
+      // Trigger file input
+      const fileInput = container.querySelector('input[type="file"]')
+      const file = new File(['test'], 'test.xlsx')
+      fireEvent.change(fileInput, { target: { files: [file] } })
+
+      // Verify onImport was called with an Error
+      expect(onImport).toHaveBeenCalled()
+      const arg = onImport.mock.calls[0][0]
+      expect(arg).toBeInstanceOf(Error)
+      expect(arg.message).toMatch(/Не удалось прочитать файл/)
+    } finally {
+      // Restore original FileReader
+      window.FileReader = OriginalFileReader
+    }
+  })
 })
