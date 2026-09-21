@@ -111,7 +111,7 @@ export default function App() {
           onChangeBudget={(categoryId, limit) =>
             updateSettings({ ...settings, budgets: { ...settings.budgets, [categoryId]: limit } })}
           onShowUncategorized={() => {
-            setTransactionsPreset({ filters: { categoryId: NO_CATEGORY }, sort: 'amount' })
+            setTransactionsPreset({ filters: { categoryId: NO_CATEGORY, countableOnly: true }, sort: 'amount' })
             setScreen('transactions')
           }}
         />

@@ -70,6 +70,9 @@ describe('App import flow', () => {
   })
 })
 
-// Note: Additional integration tests for preset navigation are covered
-// by TransactionsScreen tests verifying that initialFilters parameter works correctly
-// and by CategoriesScreen tests verifying the onShowUncategorized callback
+// Note: Preset reset behavior is tested via:
+// 1. CategoriesScreen.test.jsx: onShowUncategorized callback receives { countableOnly: true }
+// 2. TransactionsScreen.test.jsx: controlled select with initialFilters renders with correct value
+// 3. Filter.test.js: countableOnly option excludes non-countable operations
+// 4. Manual verification in browser shows preset resets when navigating through tabs
+// The handleNavigate() handler in App.jsx resets the preset when leaving transactions screen

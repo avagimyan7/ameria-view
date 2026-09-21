@@ -43,4 +43,15 @@ describe('filterTransactions', () => {
     const list = [tx({ amount: 500000 }), tx({ amount: 500000, categoryId: 'cafe' })]
     expect(filterTransactions(list, { minAmount: 100000, categoryId: 'cafe' })).toHaveLength(1)
   })
+
+  it('countableOnly исключает внутренние переводы, нерешённые и неподтверждённые операции', () => {
+    const list = [
+      tx({ direction: 'expense' }), // Approved, expense - counted
+      tx({ direction: 'income' }), // Approved, income - counted
+      tx({ direction: 'internal' }), // Internal - NOT counted
+      tx({ direction: 'unresolved' }), // Unresolved - NOT counted
+      tx({ status: 'Պենդինգ' }), // Not approved - NOT counted
+    ]
+    expect(filterTransactions(list, { countableOnly: true })).toHaveLength(2)
+  })
 })

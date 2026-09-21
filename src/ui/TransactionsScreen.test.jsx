@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { TransactionsScreen } from './TransactionsScreen.jsx'
 import { SEED_CATEGORIES } from '../rules/seed.js'
+import { NO_CATEGORY } from '../stats/filter.js'
 
 const tx = (over) => ({
   key: 'k1', date: '2026-09-10', opType: 'Քարտային գործարք', fromAccount: 'MINE',
@@ -118,5 +119,26 @@ describe('TransactionsScreen', () => {
     expect(/2\s000\s֏/.test(previewPanel.textContent)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /создать правило/i }))
     expect(onCreateRule).toHaveBeenCalledWith({ match: 'ASK 23 LLC YEREVAN AM', category: 'groceries' })
+  })
+
+  it('категория фильтра контролируется и отражает начальные фильтры', () => {
+    cleanup()
+    render(
+      <TransactionsScreen
+        transactions={[tx({ categoryId: null }), tx({ key: 'k2', categoryId: 'groceries' })]}
+        categories={SEED_CATEGORIES}
+        onAssign={noop}
+        onCreateRule={noop}
+        initialFilters={{ categoryId: NO_CATEGORY }}
+      />,
+    )
+    // Find the category filter select
+    const selects = screen.getAllByRole('combobox')
+    const categorySelect = selects.find((sel) => {
+      const options = Array.from(sel.options)
+      return options.some((opt) => opt.textContent.includes('Без категории'))
+    })
+    // The select value should be set to NO_CATEGORY
+    expect(categorySelect.value).toBe(NO_CATEGORY)
   })
 })

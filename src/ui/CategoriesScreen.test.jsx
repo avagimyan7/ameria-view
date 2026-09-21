@@ -104,4 +104,16 @@ describe('CategoriesScreen', () => {
     fireEvent.change(screen.getByTestId('budget-groceries-limit'), { target: { value: '5000' } })
     expect(onChangeBudget).toHaveBeenCalledWith('groceries', 500000)
   })
+
+  it('счет неразобранных не включает внутренние переводы', () => {
+    render(
+      <CategoriesScreen {...props}
+        transactions={[
+          tx({ categoryId: null, direction: 'expense', amount: 100000 }),
+          tx({ categoryId: null, direction: 'internal', amount: 500000 }),
+        ]} />,
+    )
+    const summary = screen.getByTestId('uncategorized-summary').textContent
+    expect(summary).toMatch(/1 операций/)
+  })
 })
