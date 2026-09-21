@@ -114,7 +114,7 @@ describe('TransactionsScreen', () => {
     fireEvent.change(screen.getByTestId('assign-k1'), { target: { value: 'groceries' } })
     // Preview excludes source transaction (k1), counts k2 and k3 (both match ASK 23 LLC), not k4 (DIFFERENT)
     // count = 2 (k2 and k3), amount = 100000 + 100000 = 200000 luma = 2000 AMD
-    expect(screen.getByText(/затронет ещё 2/i)).toBeTruthy()
+    expect(screen.getByText(/затронет ещё 2 операции на/i)).toBeTruthy()
     const previewPanel = screen.getByText(/затронет ещё 2/i).closest('.panel')
     expect(/2\s000\s֏/.test(previewPanel.textContent)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /создать правило/i }))
@@ -144,7 +144,7 @@ describe('TransactionsScreen', () => {
 
     // Превью описывает именно то правило, которое будет создано: только входящие.
     const previewPanel = screen.getByText(/затронет ещё/i).closest('.panel')
-    expect(previewPanel.textContent).toMatch(/затронет ещё 1 /)
+    expect(previewPanel.textContent).toMatch(/затронет ещё 1 операцию на/)
     expect(previewPanel.textContent).toMatch(/на 2\s000\s֏/)
     expect(previewPanel.textContent).toMatch(/только доходы/)
 

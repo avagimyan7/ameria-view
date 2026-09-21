@@ -3,7 +3,7 @@ import { byCategory, uncategorized } from '../stats/aggregate.js'
 import { budgetProgress } from '../stats/budget.js'
 import { monthOf } from '../import/date.js'
 import { CategoryBars } from './charts/CategoryBars.jsx'
-import { formatMoney, formatMonth } from './format.js'
+import { formatMoney, formatMonth, pluralRu } from './format.js'
 
 export function CategoriesScreen({
   transactions, categories, budgets, month, today, onChangeBudget, onShowUncategorized, currency = null,
@@ -41,8 +41,9 @@ export function CategoriesScreen({
               два числа на одном экране не выглядели противоречием. */}
           <h3>Без категории</h3>
           <p data-testid="uncategorized-summary">
-            За весь период, доходы и расходы вместе: {pending.length} операций
-            на {formatMoney(pendingAmount, currency)}. Начни с самых крупных —
+            За весь период, доходы и расходы вместе: {pending.length}{' '}
+            {pluralRu(pending.length, ['операция', 'операции', 'операций'])}
+            {' '}на {formatMoney(pendingAmount, currency)}. Начни с самых крупных —
             в них лежит почти весь неопознанный оборот.
           </p>
           <button type="button" onClick={onShowUncategorized}>Разобрать</button>

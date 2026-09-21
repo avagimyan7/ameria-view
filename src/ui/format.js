@@ -28,3 +28,16 @@ export function formatMonth(month) {
 export function maskAccount(account) {
   return account.length > 8 ? `${account.slice(0, 4)}…${account.slice(-4)}` : account
 }
+
+// Форма существительного при числе по-русски. forms — [одна, несколько, много]:
+// ['операция', 'операции', 'операций'] → 1 операция, 2–4 операции, 5+ операций,
+// а 11–14 (и 111–114) — всегда «много». Для винительного падежа передаются
+// свои формы: ['операцию', 'операции', 'операций'].
+export function pluralRu(count, [one, few, many]) {
+  const lastTwo = Math.abs(count) % 100
+  const last = lastTwo % 10
+  if (lastTwo >= 11 && lastTwo <= 14) return many
+  if (last === 1) return one
+  if (last >= 2 && last <= 4) return few
+  return many
+}

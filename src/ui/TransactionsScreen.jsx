@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { filterTransactions, NO_CATEGORY } from '../stats/filter.js'
 import { rulePreview, ruleMatches } from '../rules/match.js'
 import { suggestRuleText } from '../rules/normalize.js'
-import { formatDate, formatMoney } from './format.js'
+import { formatDate, formatMoney, pluralRu } from './format.js'
 
 const DIRECTION_LABELS = {
   expense: 'расходы',
@@ -122,7 +122,8 @@ export function TransactionsScreen({
           <p>
             Правило «{rule.match}»
             {rule.direction ? ` (только ${DIRECTION_LABELS[rule.direction] ?? rule.direction})` : ''}
-            {' '}затронет ещё {preview.count} операций{previewAmountText}.
+            {' '}затронет ещё {preview.count}{' '}
+            {pluralRu(preview.count, ['операцию', 'операции', 'операций'])}{previewAmountText}.
           </p>
           <button type="button" onClick={() => { onCreateRule(rule); setPendingRule(null) }}>
             Создать правило
